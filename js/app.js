@@ -35,6 +35,12 @@
     if (!items.length) return el("div", { class: "state" }, [el("p", { text: emptyMsg })]);
     return el("div", { class: "grid" }, items.map((v, i) => card(v, items, i)));
   }
+  function demoBanner() {
+    return el("div", { class: "demo-banner" }, [
+      el("span", { text: "Chế độ demo: dữ liệu mẫu (video thật vẫn phát được). Vào Cài đặt để dùng dữ liệu YouTube thật." }),
+      el("button", { class: "chip", type: "button", text: "Cài đặt", onclick: () => navigate("settings") })
+    ]);
+  }
   function moreButton(fn) {
     const b = el("button", { class: "btn", type: "button", text: "Tải thêm", style: "margin:var(--gap) auto;display:flex" });
     b.onclick = async () => { b.disabled = true; b.textContent = "Đang tải…"; try { await fn(); b.remove(); } catch (e) { showError(e); } };
@@ -76,10 +82,12 @@
       chips.replaceChildren(...cats.map(c => el("button", { class: "chip" + (c.id === trendingCat ? " active" : ""), type: "button", text: c.title, onclick: () => { trendingCat = c.id; renderHome(); } })));
       chips.hidden = false;
 
-      let page = await Api.trending({ categoryId: trendingCat });
+      const demo = Demo.active();
+      let page = demo ? Demo.trending() : await Api.trending({ categoryId: trendingCat });
       const items = page.items;
       const g = grid(items);
       view.replaceChildren(g);
+      if (demo) view.prepend(demoBanner());
       const addMore = () => { if (page.next) view.append(moreButton(async () => {
         page = await Api.trending({ categoryId: trendingCat, pageToken: page.next });
         const start = items.length; items.push(...page.items);
@@ -143,10 +151,12 @@
       searchQuery = q; input.value = q; pushHistory(q);
       results.replaceChildren(el("div", { class: "state" }, [el("div", { class: "spinner" })]));
       try {
-        let page = await Api.search(q);
+        const demo = Demo.active();
+        let page = demo ? Demo.search(q) : await Api.search(q);
         const items = page.items;
         const g = grid(items, { emptyMsg: "Không tìm thấy kết quả." });
         results.replaceChildren(g);
+        if (demo) results.prepend(demoBanner());
         const addMore = () => { if (page.next) results.append(moreButton(async () => {
           page = await Api.search(q, { pageToken: page.next });
           const start = items.length; items.push(...page.items);
