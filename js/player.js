@@ -38,7 +38,7 @@ window.Player = (function () {
       title: $("#player-title"), channel: $("#player-channel"), seek: $("#seek"), cur: $("#time-cur"), dur: $("#time-dur"),
       play: $("#btn-play"), prev: $("#btn-prev"), next: $("#btn-next"), rew: $("#btn-rew"), fwd: $("#btn-fwd"),
       mute: $("#btn-mute"), fs: $("#btn-fullscreen"), close: $("#btn-close-player"), qToggle: $("#btn-queue-toggle"),
-      queueList: $("#queue-list"),
+      queueList: $("#queue-list"), gesture: $("#gesture-layer"), main: $("#player-main"),
       mini: $("#minibar"), miniThumb: $("#mini-thumb"), miniTitle: $("#mini-title"), miniChannel: $("#mini-channel"),
       miniPlay: $("#mini-play"), miniNext: $("#mini-next"), miniExpand: $("#mini-expand")
     });
@@ -179,13 +179,57 @@ window.Player = (function () {
     m ? yt.mute() : yt.unMute();
     ui.mute.classList.toggle("is-muted", m);
   }
-  function toggleFullscreen() {
-    const docEl = document.documentElement;
-    if (!document.fullscreenElement) (docEl.requestFullscreen || docEl.webkitRequestFullscreen)?.call(docEl);
-    else (document.exitFullscreen || document.webkitExitFullscreen)?.call(document);
+  /* ---- Toàn màn hình chỉ vùng video ---- */
+  function isVideoFull() { return ui.root.classList.contains("video-full"); }
+  function nativeFull() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  function enterVideoFull() {
+    if (isVideoFull()) return;
+    ui.root.classList.add("video-full"); ui.fs.classList.add("is-full");
+    // Thử fullscreen thật của trình duyệt cho riêng khung video; nếu không hỗ trợ thì CSS ở trên đã phủ kín màn hình
+    const st = ui.stage, req = st.requestFullscreen || st.webkitRequestFullscreen;
+    if (req) { try { const p = req.call(st, { navigationUI: "hide" }); p?.catch?.(() => {}); } catch (_) {} }
+    toast("Chạm 2 lần hoặc vuốt xuống để thoát toàn màn hình", 2200);
   }
+  function exitVideoFull() {
+    if (!isVideoFull()) return;
+    ui.root.classList.remove("video-full"); ui.fs.classList.remove("is-full");
+    if (nativeFull() === ui.stage) { try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); } catch (_) {} }
+  }
+  function toggleFullscreen() { isVideoFull() ? exitVideoFull() : enterVideoFull(); }
+  // Người dùng thoát fullscreen bằng phím Esc / nút hệ thống -> đồng bộ lại trạng thái
+  for (const evName of ["fullscreenchange", "webkitfullscreenchange"]) {
+    document.addEventListener(evName, () => { if (!nativeFull() && isVideoFull()) { ui.root.classList.remove("video-full"); ui.fs.classList.remove("is-full"); } });
+  }
+
+  /* ---- Cử chỉ: chạm 2 lần = toàn màn hình, vuốt xuống = thoát toàn màn hình / thu nhỏ trình phát ---- */
+  function onSwipeDown() { if (isVideoFull()) exitVideoFull(); else collapse(); }
+  function bindGestures() {
+    let start = null, lastTap = 0, tapTimer = null;
+    const SWIPE = 70, TAP = 15, DOUBLE_MS = 320;
+    ui.main.addEventListener("pointerdown", (e) => {
+      if (e.target.closest("input,button,a")) { start = null; return; }
+      start = { x: e.clientX, y: e.clientY, t: Date.now(), onVideo: e.target === ui.gesture };
+      if (start.onVideo) { try { ui.gesture.setPointerCapture(e.pointerId); } catch (_) {} }
+    });
+    ui.main.addEventListener("pointercancel", () => { start = null; });
+    ui.main.addEventListener("pointerup", (e) => {
+      if (!start) return;
+      const dx = e.clientX - start.x, dy = e.clientY - start.y, dt = Date.now() - start.t, onVideo = start.onVideo;
+      start = null;
+      const vertical = Math.abs(dy) > Math.abs(dx) * 1.5;
+      if (dt < 800 && vertical && dy > SWIPE) { onSwipeDown(); return; }
+      if (dt < 800 && vertical && dy < -SWIPE && onVideo) { enterVideoFull(); return; }   // vuốt lên trên video = toàn màn hình
+      if (onVideo && Math.hypot(dx, dy) < TAP) {
+        const now = Date.now();
+        if (now - lastTap < DOUBLE_MS) { clearTimeout(tapTimer); lastTap = 0; toggleFullscreen(); }
+        else { lastTap = now; tapTimer = setTimeout(() => { if (!fallback) toggle(); }, DOUBLE_MS); }  // chạm 1 lần = phát/dừng
+      }
+    });
+    ui.gesture.addEventListener("dblclick", (e) => e.preventDefault());
+  }
+
   function expand() { expanded = true; ui.root.hidden = false; document.body.classList.add("player-open"); }
-  function collapse() { expanded = false; ui.root.hidden = true; document.body.classList.remove("player-open"); }
+  function collapse() { exitVideoFull(); expanded = false; ui.root.hidden = true; document.body.classList.remove("player-open"); }
   function isExpanded() { return expanded; }
 
   function renderQueue() {
@@ -203,6 +247,6 @@ window.Player = (function () {
     if (active) active.scrollIntoView({ block: "nearest" });
   }
 
-  document.addEventListener("DOMContentLoaded", bindUi);
+  document.addEventListener("DOMContentLoaded", () => { bindUi(); bindGestures(); });
   return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index };
 })();
