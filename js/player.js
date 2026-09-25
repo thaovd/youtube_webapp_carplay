@@ -216,6 +216,8 @@ window.Player = (function () {
   /* ---- Ép độ phân giải gián tiếp: render iframe ở kích thước ảo rồi scale bằng CSS ----
      YouTube chọn chất lượng theo kích thước khung player (viewport bên trong iframe không bị ảnh hưởng bởi transform
      của trang cha), nên khung 1920×1080 thu nhỏ vẫn được YouTube coi là player 1080p. */
+  let virtualBroken = false;   // trình duyệt vẽ sai khung ảo -> tắt tự động
+  let lastExpect = null, checkPending = false;
   const VIRTUAL = { hd2160: [3840, 2160], hd1440: [2560, 1440], hd1080: [1920, 1080], hd720: [1280, 720], large: [854, 480], medium: [640, 360], small: [426, 240] };
   function applyRenderScale() {
     const frame = document.getElementById("yt-player");
@@ -230,7 +232,23 @@ window.Player = (function () {
     const [W, H] = v;
     const sc = Math.min(sw / W, sh / H);
     const w = W * sc, h = H * sc;
-    frame.style.cssText = "border:0;position:absolute;left:" + Math.round((sw - w) / 2) + "px;top:" + Math.round((sh - h) / 2) + "px;right:auto;bottom:auto;width:" + W + "px;height:" + H + "px;max-width:none;max-height:none;transform:scale(" + sc + ");transform-origin:0 0;";
+    if (virtualBroken) { frame.style.cssText = ""; return; }
+    const left = Math.round((sw - w) / 2), top = Math.round((sh - h) / 2);
+    frame.style.cssText = "border:0;position:absolute;left:" + left + "px;top:" + top + "px;right:auto;bottom:auto;width:" + W + "px;height:" + H + "px;max-width:none;max-height:none;transform:scale(" + sc + ");transform-origin:0 0;";
+    // Tự kiểm tra (so với LẦN ÁP DỤNG MỚI NHẤT, vì hàm này được gọi dồn nhiều lần khi bố cục đổi):
+    // nếu trình duyệt vẽ khung không đúng vị trí/kích thước dự kiến (một số WebView) -> bỏ khung ảo trong phiên này
+    lastExpect = { w, h, left, top, sw, sh };
+    if (!checkPending) {
+      checkPending = true;
+      setTimeout(() => {
+        checkPending = false;
+        const ex = lastExpect; if (!ex || virtualBroken) return;
+        const fr = frame.getBoundingClientRect(), sr = ui.stage.getBoundingClientRect();
+        if (Math.abs(sr.width - ex.sw) > 2 || Math.abs(sr.height - ex.sh) > 2) return;   // bố cục lại đổi tiếp, bỏ qua lần đo này
+        const bad = Math.abs(fr.width - ex.w) > 6 || Math.abs(fr.height - ex.h) > 6 || Math.abs((fr.left - sr.left) - ex.left) > 6 || Math.abs((fr.top - sr.top) - ex.top) > 6;
+        if (bad) { virtualBroken = true; console.warn("Khung ảo hiển thị sai, tắt trong phiên này", fr, ex); frame.style.cssText = ""; }
+      }, 250);
+    }
   }
   /* Tính lại vài lần sau khi bố cục đổi (animation, fullscreen, xoay màn) */
   function rescaleSoon() {
@@ -312,12 +330,24 @@ window.Player = (function () {
   /* ---- Toàn màn hình chỉ vùng video ---- */
   function isVideoFull() { return ui.root.classList.contains("video-full"); }
   function nativeFull() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
+  /* iOS/iPadOS (kể cả WebView trong CarPlay): Fullscreen API đưa phần tử lên cửa sổ của điện thoại, kích thước khác màn xe
+     -> chỉ dùng CSS phủ toàn màn hình, không gọi requestFullscreen */
+  let cssOnlyFull = false;   // true khi app tự huỷ fullscreen thật vì kích thước lệch
+  const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   function enterVideoFull() {
     if (isVideoFull()) return;
     ui.root.classList.add("video-full"); ui.fs.classList.add("is-full");
-    // Thử fullscreen thật của trình duyệt cho riêng khung video; nếu không hỗ trợ thì CSS ở trên đã phủ kín màn hình
-    const st = ui.stage, req = st.requestFullscreen || st.webkitRequestFullscreen;
-    if (req) { try { const p = req.call(st, { navigationUI: "hide" }); p?.catch?.(() => {}); } catch (_) {} }
+    if (!IS_IOS && Util.loadSettings().nativeFullscreen !== false) {
+      // Thử fullscreen thật của trình duyệt cho riêng khung video; sau đó kiểm tra khung có phủ đúng viewport không
+      const st = ui.stage, req = st.requestFullscreen || st.webkitRequestFullscreen;
+      if (req) { try { const p = req.call(st, { navigationUI: "hide" }); p?.catch?.(() => {}); } catch (_) {} }
+      setTimeout(() => {
+        if (nativeFull() !== ui.stage) return;
+        const r = ui.stage.getBoundingClientRect();
+        const ok = Math.abs(r.width - window.innerWidth) < 4 && Math.abs(r.height - window.innerHeight) < 4 && Math.abs(r.left) < 2 && Math.abs(r.top) < 2;
+        if (!ok) { cssOnlyFull = true; console.warn("Fullscreen API cho kích thước lệch, chuyển sang CSS", r); try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); } catch (_) {} }
+      }, 350);
+    }
     rescaleSoon();
     toast("Chạm 2 lần hoặc vuốt xuống để thoát toàn màn hình", 2200);
   }
@@ -330,7 +360,12 @@ window.Player = (function () {
   function toggleFullscreen() { isVideoFull() ? exitVideoFull() : enterVideoFull(); }
   // Người dùng thoát fullscreen bằng phím Esc / nút hệ thống -> đồng bộ lại trạng thái
   for (const evName of ["fullscreenchange", "webkitfullscreenchange"]) {
-    document.addEventListener(evName, () => { if (!nativeFull() && isVideoFull()) { ui.root.classList.remove("video-full"); ui.fs.classList.remove("is-full"); } rescaleSoon(); });
+    document.addEventListener(evName, () => {
+      // Người dùng thoát fullscreen thật (Esc) -> thoát luôn chế độ video-full; trừ khi chính app vừa huỷ fullscreen để dùng CSS
+      if (!nativeFull() && isVideoFull() && !cssOnlyFull) { ui.root.classList.remove("video-full"); ui.fs.classList.remove("is-full"); }
+      cssOnlyFull = false;
+      rescaleSoon();
+    });
   }
 
   /* ---- Cử chỉ: chạm 2 lần = toàn màn hình, vuốt xuống = thoát toàn màn hình / thu nhỏ trình phát ---- */
@@ -341,7 +376,7 @@ window.Player = (function () {
     ui.main.addEventListener("pointerdown", (e) => {
       if (e.target.closest("input,button,a")) { start = null; return; }
       start = { x: e.clientX, y: e.clientY, t: Date.now(), onVideo: e.target === ui.gesture };
-      if (start.onVideo) { try { ui.gesture.setPointerCapture(e.pointerId); } catch (_) {} }
+      try { e.target.setPointerCapture(e.pointerId); } catch (_) {}   // nhận pointerup kể cả khi ngón tay rời khỏi vùng
     });
     ui.main.addEventListener("pointercancel", () => { start = null; });
     ui.main.addEventListener("pointerup", (e) => {
