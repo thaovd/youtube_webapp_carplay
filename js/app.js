@@ -227,11 +227,6 @@
       opts.forEach(([v, t]) => wrap.append(el("button", { type: "button", class: s[key] === v ? "active" : "", text: t, onclick: () => { Util.saveSettings({ [key]: v }); after?.(v); renderSettings(); } })));
       return wrap;
     };
-    const clientId = el("input", { type: "text", value: s.clientId, placeholder: "xxxxx.apps.googleusercontent.com", spellcheck: "false" });
-    const saveBtn = el("button", { class: "btn", type: "button", text: "Lưu Client ID", onclick: () => {
-      Util.saveSettings({ clientId: clientId.value.trim() || window.CARTUBE_DEFAULTS.clientId });
-      Api.clearCache(); Auth.reconfigure(); toast("Đã lưu"); renderSettings();
-    } });
 
     const account = el("div", { class: "btn-row" }, st.signedIn
       ? [el("span", { class: "btn", text: "Đã đăng nhập: " + (st.profile?.name || "Google") }), el("button", { class: "btn danger", type: "button", text: "Đăng xuất", onclick: () => { Auth.signOut(); subsCache = null; renderSettings(); } })]
@@ -248,9 +243,6 @@
         "Khung video được render ở đúng kích thước này (ví dụ 1920×1080) rồi thu/phóng cho vừa màn hình để YouTube ưu tiên chọn độ phân giải tương ứng. YouTube vẫn có thể hạ xuống nếu mạng yếu."),
       field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); }),
         "YouTube gốc dùng bộ điều khiển của YouTube (có bánh răng chỉnh chất lượng, phụ đề) nhưng nút nhỏ hơn."),
-      el("div", { class: "section-title", text: "Nâng cao" }),
-      field("Google OAuth Client ID", clientId, "Đã cài sẵn. Chỉ đổi nếu bạn tự tạo project Google Cloud khác (cần thêm origin " + location.origin + " vào Authorized JavaScript origins). Để trống và Lưu để quay về mặc định."),
-      saveBtn,
       el("small", { class: "muted", text: "Ứng dụng chạy hoàn toàn trên trình duyệt, chỉ xin quyền đọc YouTube; token chỉ lưu trong phiên hiện tại." })
     ]));
   }
@@ -259,7 +251,7 @@
   /* ---------- Tài khoản ---------- */
   async function doSignIn() {
     const s = Util.loadSettings();
-    if (!s.clientId) { toast("Thiếu Client ID, kiểm tra mục Nâng cao trong Cài đặt"); navigate("settings"); return; }
+    if (!s.clientId) { toast("Thiếu Client ID trong js/config.js"); return; }
     try {
       await Auth.signIn({ interactive: true });
       toast("Đăng nhập thành công");

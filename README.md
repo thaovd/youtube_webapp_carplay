@@ -64,7 +64,7 @@ Nếu triển khai ở tên miền khác hoặc muốn dùng project Google Clou
    (hoặc publish app nếu dùng lâu dài).
 3. **Credentials → Create credentials → OAuth client ID → Web application**, thêm *Authorized JavaScript origins*
    đúng địa chỉ mở app (ví dụ `http://localhost:8080`, `https://yourdomain.com`).
-4. Dán Client ID vào `js/config.js`, hoặc vào **Cài đặt → Nâng cao** trong app.
+4. Dán Client ID vào `js/config.js`.
 5. (Nâng cao, tuỳ chọn) `apiKey` trong `js/config.js` cho phép xem Xu hướng / Tìm kiếm thật khi chưa đăng nhập.
 
 ## Ghi chú kỹ thuật
