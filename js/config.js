@@ -23,6 +23,16 @@ window.CARTUBE_DEFAULTS = {
   // Tự phát video tiếp theo trong danh sách
   autoplayNext: true,
 
+  // Phụ đề: bật mặc định? và ngôn ngữ ưu tiên (vi, en, ja, ko...)
+  captions: false,
+  captionLang: "vi",
+
+  // Chất lượng ưu tiên: auto | hd1080 | hd720 | large(480p) | medium(360p)
+  quality: "auto",
+
+  // Trình phát: custom (nút lớn, tuỳ biến) | native (trình phát YouTube gốc, có menu chất lượng/phụ đề của YouTube)
+  playerMode: "custom",
+
   // Số video tối đa mỗi trang
   pageSize: 24
 };

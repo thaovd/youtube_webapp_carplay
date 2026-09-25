@@ -11,6 +11,7 @@ window.Player = (function () {
   let seeking = false;
   let pendingLoad = null;        // video muốn phát trước khi API sẵn sàng
   let expanded = false;
+  let prefsApplied = false;      // đã áp dụng phụ đề/chất lượng cho video hiện tại chưa
   let fallback = false;          // true khi IFrame API không tải được -> dùng iframe nhúng thường
   let fallbackTimer = null;
 
@@ -27,7 +28,9 @@ window.Player = (function () {
   }
   function fallbackLoad(v) {
     const holder = $("#yt-player");
-    const src = "https://www.youtube.com/embed/" + encodeURIComponent(v.id) + "?autoplay=1&playsinline=1&rel=0&controls=1&hl=" + encodeURIComponent(Util.loadSettings().lang);
+    const st = Util.loadSettings();
+    const src = "https://www.youtube.com/embed/" + encodeURIComponent(v.id) + "?autoplay=1&playsinline=1&rel=0&controls=1&hl=" + encodeURIComponent(st.lang)
+      + "&cc_lang_pref=" + encodeURIComponent(st.captionLang) + "&cc_load_policy=" + (st.captions ? 1 : 0);
     holder.replaceChildren(el("iframe", { src, allow: "autoplay; encrypted-media; picture-in-picture; fullscreen", allowfullscreen: true, title: v.title, style: "border:0;width:100%;height:100%" }));
   }
 
@@ -39,6 +42,7 @@ window.Player = (function () {
       play: $("#btn-play"), prev: $("#btn-prev"), next: $("#btn-next"), rew: $("#btn-rew"), fwd: $("#btn-fwd"),
       mute: $("#btn-mute"), fs: $("#btn-fullscreen"), close: $("#btn-close-player"), qToggle: $("#btn-queue-toggle"),
       queueList: $("#queue-list"), gesture: $("#gesture-layer"), main: $("#player-main"),
+      cc: $("#btn-cc"), quality: $("#btn-quality"), sheet: $("#sheet"), sheetTitle: $("#sheet-title"), sheetList: $("#sheet-list"),
       mini: $("#minibar"), miniThumb: $("#mini-thumb"), miniTitle: $("#mini-title"), miniChannel: $("#mini-channel"),
       miniPlay: $("#mini-play"), miniNext: $("#mini-next"), miniExpand: $("#mini-expand")
     });
@@ -49,6 +53,12 @@ window.Player = (function () {
     ui.rew.onclick = () => seekBy(-10);
     ui.fwd.onclick = () => seekBy(10);
     ui.mute.onclick = toggleMute;
+    ui.cc.onclick = openCaptionSheet;
+    ui.quality.onclick = openQualitySheet;
+    $("#sheet-close").onclick = closeSheet;
+    ui.sheet.querySelector(".sheet-backdrop").onclick = closeSheet;
+    // Chế độ "trình phát YouTube gốc": dùng thẳng iframe thường (có menu phụ đề/chất lượng của YouTube)
+    if (Util.loadSettings().playerMode === "native") { fallback = true; ui.root.classList.add("fallback"); }
     ui.fs.onclick = toggleFullscreen;
     ui.close.onclick = collapse;
     ui.miniExpand.onclick = expand;
@@ -71,6 +81,7 @@ window.Player = (function () {
         case "MediaTrackPrevious": case "P": prev(); break;
         case "m": toggleMute(); break;
         case "f": toggleFullscreen(); break;
+        case "c": openCaptionSheet(); break;
         case "Escape": if (expanded) collapse(); break;
       }
     });
@@ -97,7 +108,8 @@ window.Player = (function () {
       width: "100%", height: "100%",
       playerVars: {
         controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, fs: 0, disablekb: 1,
-        origin: location.origin, hl: Util.loadSettings().lang
+        origin: location.origin, hl: Util.loadSettings().lang,
+        cc_lang_pref: Util.loadSettings().captionLang, cc_load_policy: Util.loadSettings().captions ? 1 : 0
       },
       events: { onReady, onStateChange, onError }
     });
@@ -112,7 +124,7 @@ window.Player = (function () {
     ui.play.classList.toggle("is-playing", playing);
     ui.miniPlay.classList.toggle("is-playing", playing);
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
-    if (playing) { ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); } else stopTicker();
+    if (playing) { ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); if (!prefsApplied) { prefsApplied = true; setTimeout(applyPrefs, 600); } } else stopTicker();
     if (e.data === S.ENDED) { if (Util.loadSettings().autoplayNext) next(); }
   }
   function onError(e) {
@@ -149,6 +161,7 @@ window.Player = (function () {
     if (i < 0 || i >= queue.length) return;
     if (!fallback && (!apiReady || !yt?.loadVideoById)) { pendingLoad = i; armFallback(); return; }
     index = i;
+    prefsApplied = false;
     const v = queue[i];
     ui.err.hidden = true;
     ui.seek.value = 0; updateSeekStyle(); ui.cur.textContent = "0:00"; ui.dur.textContent = fmtTime(v.duration);
@@ -179,6 +192,75 @@ window.Player = (function () {
     m ? yt.mute() : yt.unMute();
     ui.mute.classList.toggle("is-muted", m);
   }
+  /* ---- Phụ đề & chất lượng (YouTube IFrame API) ---- */
+  const QUALITY_LABEL = { auto: "Tự động", highres: "4K+", hd2160: "2160p (4K)", hd1440: "1440p", hd1080: "1080p", hd720: "720p", large: "480p", medium: "360p", small: "240p", tiny: "144p", default: "Tự động" };
+  function ccTracks() { try { return yt.getOption("captions", "tracklist") || []; } catch (_) { return []; } }
+  function ccCurrent() { try { const t = yt.getOption("captions", "track"); return t && t.languageCode ? t : null; } catch (_) { return null; } }
+  function ccOn() { return !!ccCurrent(); }
+  function setCaptions(track) {           // track = null để tắt
+    if (!yt?.setOption) return;
+    try {
+      if (track) { yt.loadModule("captions"); yt.setOption("captions", "track", { languageCode: track.languageCode, kind: track.kind }); }
+      else yt.setOption("captions", "track", {});
+    } catch (_) {}
+    setTimeout(() => ui.cc.classList.toggle("on", ccOn()), 300);
+  }
+  function applyPrefs() {
+    const s = Util.loadSettings();
+    if (fallback || !yt?.setOption) return;
+    try { yt.loadModule("captions"); } catch (_) {}   // tải danh sách phụ đề để nút CC có dữ liệu
+    setTimeout(() => {
+      if (s.captions) {
+        const tracks = ccTracks();
+        const pick = tracks.find(t => t.languageCode === s.captionLang && t.kind !== "asr") || tracks.find(t => t.languageCode === s.captionLang) || tracks[0];
+        if (pick) setCaptions(pick); else setCaptions(null);
+      } else setCaptions(null);
+      if (s.quality && s.quality !== "auto") requestQuality(s.quality, true);
+    }, 400);
+  }
+  function requestQuality(q, silent) {
+    if (!yt) return;
+    try {
+      if (q === "auto") { yt.setPlaybackQualityRange?.("tiny", "highres"); yt.setPlaybackQuality?.("default"); }
+      else { yt.setPlaybackQualityRange?.(q, q); yt.setPlaybackQuality?.(q); }
+    } catch (_) {}
+    if (!silent) {
+      toast("Đã yêu cầu " + (QUALITY_LABEL[q] || q) + ". YouTube có thể tự điều chỉnh theo mạng.");
+      setTimeout(() => { try { const cur = yt.getPlaybackQuality(); if (cur && cur !== "unknown") toast("Đang phát: " + (QUALITY_LABEL[cur] || cur)); } catch (_) {} }, 3000);
+    }
+  }
+
+  /* Bảng chọn dùng chung */
+  function openSheet(title, items) {      // items: [{label, active, onclick}]
+    ui.sheetTitle.textContent = title;
+    ui.sheetList.replaceChildren(...items.map(it => el("button", { class: "btn" + (it.active ? " active" : ""), type: "button", text: it.label, onclick: () => { closeSheet(); it.onclick(); } })));
+    ui.sheet.hidden = false;
+  }
+  function closeSheet() { ui.sheet.hidden = true; }
+  function openCaptionSheet() {
+    if (fallback || !yt?.getOption) { toast("Dùng nút CC / bánh răng trong trình phát YouTube"); return; }
+    try { yt.loadModule("captions"); } catch (_) {}
+    const tracks = ccTracks(), cur = ccCurrent();
+    if (!tracks.length) { toast("Video này không có phụ đề"); return; }
+    const items = [{ label: "Tắt phụ đề", active: !cur, onclick: () => { setCaptions(null); toast("Đã tắt phụ đề"); } }];
+    for (const t of tracks) {
+      const base = t.displayName || t.languageName || t.languageCode;
+      const name = base + (t.kind === "asr" && !/auto|tự động/i.test(base) ? " (tự động)" : "");
+      items.push({ label: name, active: !!cur && cur.languageCode === t.languageCode && (cur.kind || "") === (t.kind || ""), onclick: () => { setCaptions(t); toast("Phụ đề: " + name); } });
+    }
+    openSheet("Phụ đề", items);
+  }
+  function openQualitySheet() {
+    if (fallback || !yt?.getAvailableQualityLevels) { toast("Dùng bánh răng trong trình phát YouTube"); return; }
+    let levels = [];
+    try { levels = yt.getAvailableQualityLevels() || []; } catch (_) {}
+    levels = levels.filter(q => q !== "auto" && q !== "default");
+    let cur = "auto"; try { cur = yt.getPlaybackQuality() || "auto"; } catch (_) {}
+    const items = [{ label: "Tự động", active: false, onclick: () => requestQuality("auto") }];
+    for (const q of levels) items.push({ label: QUALITY_LABEL[q] || q, active: q === cur, onclick: () => requestQuality(q) });
+    openSheet("Chất lượng video (đang phát: " + (QUALITY_LABEL[cur] || cur) + ")", items);
+  }
+
   /* ---- Toàn màn hình chỉ vùng video ---- */
   function isVideoFull() { return ui.root.classList.contains("video-full"); }
   function nativeFull() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
@@ -248,5 +330,5 @@ window.Player = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", () => { bindUi(); bindGestures(); });
-  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index };
+  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index, setCaptions, requestQuality };
 })();
