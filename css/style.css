@@ -226,8 +226,9 @@ img { display: block; }
 /* ---------- Trình phát ---------- */
 #player {
   position: fixed; inset: 0; background: #000; z-index: 50; display: grid;
-  grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "main";
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr); grid-template-areas: "main queue";
   padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
+  --qw-open: clamp(300px, 30vw, 480px);      /* độ rộng hàng đợi khi mở (màn ngang) */
 }
 #player-main { grid-area: main; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 #player-stage { flex: 1; min-height: 0; position: relative; background: #000; }
@@ -278,14 +279,23 @@ input[type=range]::-moz-range-thumb { width: 30px; height: 30px; border-radius: 
 #player.fallback #player-stage iframe { position: absolute; inset: 0; }
 
 /* Danh sách phát tiếp theo */
-#queue { grid-area: queue; background: var(--bg-2); border-left: 1px solid #2e2e2e; display: none; flex-direction: column; min-height: 0; }
-#player.show-queue #queue { display: flex; }
-.queue-head { padding: var(--gap) calc(var(--gap) * 1.5); font-weight: 700; border-bottom: 1px solid #2e2e2e; }
-#queue-list { overflow-y: auto; flex: 1; padding: var(--gap); display: flex; flex-direction: column; gap: calc(var(--gap) * .7); }
+/* Hàng đợi trượt ngang: mặc định đóng (rộng 0), mở bằng .show-queue; ở 21:9 và màn dọc mặc định mở, đóng bằng .hide-queue */
+#queue {
+  grid-area: queue; background: var(--bg-2); display: flex; flex-direction: column; min-height: 0; overflow: hidden;
+  --qw: 0px; width: var(--qw); opacity: 0; border-left: 0 solid #2e2e2e;
+  transition: width .32s cubic-bezier(.2, .8, .2, 1), opacity .24s ease, border-left-width .32s;
+}
+#queue.open, #player.show-queue #queue { --qw: var(--qw-open); opacity: 1; border-left-width: 1px; }
+/* Nội dung giữ đúng độ rộng mở để chữ không xô lệch trong lúc trượt */
+.queue-head, #queue-list { width: var(--qw-open); flex-shrink: 0; }
+.queue-head { padding: var(--gap) calc(var(--gap) * 1.5); font-weight: 700; border-bottom: 1px solid #2e2e2e; font-size: .95em; }
+#queue-list { overflow-y: auto; flex: 1 1 0; min-height: 0; padding: var(--gap); display: flex; flex-direction: column; gap: calc(var(--gap) * .7); }
+@media (prefers-reduced-motion: reduce) { #queue, #player { transition: none !important; } }
 .q-item { display: flex; gap: var(--gap); align-items: center; text-align: left; padding: 6px; border-radius: var(--radius); min-height: var(--touch); }
 .q-item img { width: calc(var(--touch) * 1.7); aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; flex: 0 0 auto; background: #000; }
 .q-item .q-text { min-width: 0; flex: 1; }
-.q-item .q-title { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: .95em; }
+.q-item .q-title { font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: .84em; line-height: 1.25; }
+.q-item .q-sub { font-size: .78em; }
 .q-item.active { background: var(--bg-3); }
 .q-item:active { background: #333; }
 
@@ -302,10 +312,8 @@ input[type=range]::-moz-range-thumb { width: 30px; height: 30px; border-radius: 
 
 /* 21:9 và rộng hơn (≈ 2.33): hiển thị danh sách phát cạnh video, nhiều cột hơn */
 @media (min-aspect-ratio: 2/1) {
-  #player { grid-template-columns: minmax(0, 1fr) minmax(320px, 30%); grid-template-areas: "main queue"; }
-  #queue { display: flex; }
-  #player.hide-queue #queue { display: none; }
-  #player.hide-queue { grid-template-columns: minmax(0, 1fr); grid-template-areas: "main"; }
+  #queue { --qw: var(--qw-open); opacity: 1; border-left-width: 1px; }
+  #player.hide-queue #queue { --qw: 0px; opacity: 0; border-left-width: 0; }
   .ctl-row { gap: clamp(16px, 3vmin, 48px); }
 }
 
@@ -336,14 +344,13 @@ input[type=range]::-moz-range-thumb { width: 30px; height: 30px; border-radius: 
   .rail-spacer { display: none; }
   .rail-btn[data-nav="settings"] { display: none; }        /* vào Cài đặt qua nút tài khoản */
   :root { --card-min: clamp(150px, 42vw, 240px); }
-  #player { grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "main" "queue"; }
+  #player { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); grid-template-areas: "main" "queue"; align-content: start; transition: grid-template-rows .32s cubic-bezier(.2, .8, .2, 1); }
+  #player.hide-queue { grid-template-rows: auto 0fr; }
   #player-main { flex: 0 0 auto; }
   #player-stage { flex: 0 0 auto; aspect-ratio: 16/9; }
-  #queue { display: flex; border-left: 0; border-top: 1px solid #2e2e2e; }
-  #player.hide-queue #queue { display: none; }
-  #player.hide-queue { grid-template-rows: minmax(0, 1fr); grid-template-areas: "main"; }
-  #player.hide-queue #player-main { flex: 1; }
-  #player.hide-queue #player-stage { flex: 1; aspect-ratio: auto; }
+  #queue { --qw: auto; width: auto; opacity: 1; border-left: 0; border-top: 1px solid #2e2e2e; transition: opacity .24s ease; }
+  .queue-head, #queue-list { width: auto; }
+  #player.hide-queue #queue { opacity: 0; }
   .ctl-row { gap: 6px; }
   .ctl-row .ctl { width: clamp(46px, 13vw, var(--touch)); height: clamp(46px, 13vw, var(--touch)); font-size: clamp(22px, 6.2vw, calc(var(--touch) * .48)); }
   .ctl-row .ctl-big { width: clamp(60px, 18vw, var(--touch-big)); height: clamp(60px, 18vw, var(--touch-big)); font-size: clamp(30px, 9.5vw, calc(var(--touch-big) * .55)); }

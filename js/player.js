@@ -174,10 +174,8 @@ window.Player = (function () {
   }
   function loadIndex(i) {
     if (i < 0 || i >= queue.length) return;
-    if (!fallback && (!apiReady || !yt?.loadVideoById)) { pendingLoad = i; armFallback(); return; }
-    index = i;
-    prefsApplied = false;
     const v = queue[i];
+    // Cập nhật thông tin hiển thị ngay, kể cả khi API chưa sẵn sàng
     ui.err.hidden = true;
     ui.seek.value = 0; updateSeekStyle(); ui.cur.textContent = "0:00"; ui.dur.textContent = fmtTime(v.duration);
     ui.title.textContent = v.title; ui.channel.textContent = v.channel;
@@ -185,6 +183,9 @@ window.Player = (function () {
     ui.coverImg.src = v.thumb;
     if (!fallback) { ui.cover.hidden = false; ui.coverActions.hidden = true; ui.cover.querySelector(".cover-play").toggleAttribute("hidden", true); ui.root.classList.remove("ended"); }
     ui.mini.hidden = false;
+    if (!fallback && (!apiReady || !yt?.loadVideoById)) { pendingLoad = i; armFallback(); return; }
+    index = i;
+    prefsApplied = false;
     if (fallback) fallbackLoad(v); else yt.loadVideoById(v.id);
     if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: v.title, artist: v.channel, artwork: [{ src: v.thumb }] });
     renderQueue();
@@ -356,7 +357,7 @@ window.Player = (function () {
         el("img", { src: v.thumb, alt: "", loading: "lazy" }),
         el("div", { class: "q-text" }, [
           el("div", { class: "q-title", text: v.title }),
-          el("div", { class: "muted ellipsis", text: v.channel + (v.duration ? " · " + fmtTime(v.duration) : "") })
+          el("div", { class: "q-sub muted ellipsis", text: v.channel + (v.duration ? " · " + fmtTime(v.duration) : "") })
         ])
       ]);
       return b;
