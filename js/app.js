@@ -223,7 +223,7 @@
     setChrome("Cài đặt");
     const s = Util.loadSettings();
     const st = Auth.getState();
-    const field = (label, node, help) => el("div", { class: "field" }, [el("label", { text: label }), node, help ? el("small", { text: help }) : null]);
+    const field = (label, node) => el("div", { class: "field" }, [el("label", { text: label }), node]);
     const seg = (key, opts, after) => {
       const wrap = el("div", { class: "seg" });
       opts.forEach(([v, t]) => wrap.append(el("button", { type: "button", class: s[key] === v ? "active" : "", text: t, onclick: () => { Util.saveSettings({ [key]: v }); after?.(v); renderSettings(); } })));
@@ -235,23 +235,19 @@
       : [el("button", { class: "btn primary", type: "button", text: "Đăng nhập Google", onclick: doSignIn })]);
 
     view.replaceChildren(el("div", { class: "settings" }, [
-      field("Tài khoản", account, "Đăng nhập để xem kênh đăng ký, video đã thích và playlist của bạn."),
+      field("Tài khoản", account),
       field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
       field("Tự phát video tiếp theo", seg("autoplayNext", [[true, "Bật"], [false, "Tắt"]])),
       field("Ngôn ngữ giọng nói", seg("speechLang", [["vi-VN", "Tiếng Việt"], ["en-US", "English"], ["ja-JP", "日本語"], ["ko-KR", "한국어"]])),
-      field("Phụ đề mặc định", seg("captions", [[true, "Bật"], [false, "Tắt"]]), "Có thể đổi nhanh bằng nút CC trong trình phát."),
+      field("Phụ đề mặc định", seg("captions", [[true, "Bật"], [false, "Tắt"]])),
       field("Ngôn ngữ phụ đề ưu tiên", seg("captionLang", [["vi", "Tiếng Việt"], ["en", "English"], ["ja", "日本語"], ["ko", "한국어"]])),
-      field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]], () => Player.applyRenderScale()),
-        "Khung video được render ở đúng kích thước này (ví dụ 1920×1080) rồi thu/phóng cho vừa màn hình để YouTube ưu tiên chọn độ phân giải tương ứng. YouTube vẫn có thể hạ xuống nếu mạng yếu."),
-      field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale()),
-        "Cách app ép độ phân giải. Nếu trên thiết bị nào video bị lệch/cắt mép khi toàn màn hình, hãy tắt."),
-      field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); }),
-        "YouTube gốc dùng bộ điều khiển của YouTube (có bánh răng chỉnh chất lượng, phụ đề) nhưng nút nhỏ hơn."),
+      field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]], () => Player.applyRenderScale())),
+      field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale())),
+      field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
       field("Phiên bản", el("div", { class: "btn-row" }, [
         el("span", { class: "btn", text: "Bản " + (window.CARTUBE_BUILD.startsWith("__") ? "cục bộ" : window.CARTUBE_BUILD) }),
         el("button", { class: "btn primary", type: "button", text: "Tải lại bản mới", onclick: async () => { const updated = await checkForUpdate(false); if (!updated) setTimeout(hardReload, 600); } })
-      ]), "Nếu giao diện không cập nhật sau khi có thay đổi, bấm nút này để bỏ qua cache của trình duyệt."),
-      el("small", { class: "muted", text: "Ứng dụng chạy hoàn toàn trên trình duyệt, chỉ xin quyền đọc YouTube; token chỉ lưu trong phiên hiện tại." })
+      ]))
     ]));
   }
   function applyScale(v) { document.documentElement.dataset.scale = v || Util.loadSettings().uiScale; }
