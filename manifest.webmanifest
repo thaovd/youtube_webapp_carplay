@@ -1,0 +1,10 @@
+{
+  "name": "CarTube – YouTube cho ô tô",
+  "short_name": "CarTube",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0f0f0f",
+  "theme_color": "#0f0f0f",
+  "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

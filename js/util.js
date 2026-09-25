@@ -1,0 +1,77 @@
+/* Tiện ích chung */
+window.Util = (function () {
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+  function el(tag, attrs = {}, children = []) {
+    const n = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === "class") n.className = v;
+      else if (k === "text") n.textContent = v;
+      else if (k === "html") n.innerHTML = v;
+      else if (k.startsWith("on") && typeof v === "function") n.addEventListener(k.slice(2), v);
+      else if (v !== null && v !== undefined && v !== false) n.setAttribute(k, v === true ? "" : v);
+    }
+    for (const c of [].concat(children)) if (c != null) n.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return n;
+  }
+
+  /* Đọc/ghi cài đặt */
+  const SKEY = "cartube.settings";
+  function loadSettings() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(SKEY) || "{}"); } catch (_) {}
+    return Object.assign({}, window.CARTUBE_DEFAULTS, saved);
+  }
+  function saveSettings(patch) {
+    const cur = loadSettings();
+    const next = Object.assign(cur, patch);
+    localStorage.setItem(SKEY, JSON.stringify(next));
+    return next;
+  }
+
+  /* ISO 8601 (PT1H2M3S) -> giây */
+  function parseDuration(iso) {
+    if (!iso) return 0;
+    const m = /P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/.exec(iso);
+    if (!m) return 0;
+    return (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0);
+  }
+  function fmtTime(sec) {
+    sec = Math.max(0, Math.floor(sec || 0));
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+    const mm = h ? String(m).padStart(2, "0") : String(m);
+    return (h ? h + ":" : "") + mm + ":" + String(s).padStart(2, "0");
+  }
+  function fmtCount(n) {
+    n = +n || 0;
+    if (n >= 1e9) return (n / 1e9).toFixed(1).replace(/\.0$/, "") + " T";
+    if (n >= 1e6) return (n / 1e6).toFixed(1).replace(/\.0$/, "") + " Tr";
+    if (n >= 1e3) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + " N";
+    return String(n);
+  }
+  function fmtAgo(iso) {
+    if (!iso) return "";
+    const d = (Date.now() - new Date(iso).getTime()) / 1000;
+    const units = [["năm", 31536000], ["tháng", 2592000], ["tuần", 604800], ["ngày", 86400], ["giờ", 3600], ["phút", 60]];
+    for (const [name, s] of units) if (d >= s) return Math.floor(d / s) + " " + name + " trước";
+    return "vừa xong";
+  }
+
+  function bestThumb(thumbs) {
+    if (!thumbs) return "";
+    return (thumbs.maxres || thumbs.standard || thumbs.high || thumbs.medium || thumbs.default || {}).url || "";
+  }
+
+  let toastTimer;
+  function toast(msg, ms = 2600) {
+    const t = $("#toast");
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (t.hidden = true), ms);
+  }
+
+  function decodeHtml(s) { const t = document.createElement("textarea"); t.innerHTML = s || ""; return t.value; }
+
+  return { $, $$, el, loadSettings, saveSettings, parseDuration, fmtTime, fmtCount, fmtAgo, bestThumb, toast, decodeHtml };
+})();
