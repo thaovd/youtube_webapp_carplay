@@ -30,6 +30,8 @@ window.CARTUBE_DEFAULTS = {
 
   // Chất lượng ưu tiên: auto | hd1080 | hd720 | large(480p) | medium(360p)
   quality: "auto",
+  // Ép chất lượng bằng "khung ảo" (render iframe ở đúng kích thước rồi thu nhỏ). Tắt nếu thiết bị hiển thị video lệch.
+  virtualFrame: true,
 
   // Trình phát: custom (nút lớn, tuỳ biến) | native (trình phát YouTube gốc, có menu chất lượng/phụ đề của YouTube)
   playerMode: "custom",

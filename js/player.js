@@ -220,13 +220,23 @@ window.Player = (function () {
   function applyRenderScale() {
     const frame = document.getElementById("yt-player");
     if (!frame || !ui.stage) return;
-    const v = fallback ? null : VIRTUAL[Util.loadSettings().quality];
-    const sw = ui.stage.clientWidth, sh = ui.stage.clientHeight;
+    const s = Util.loadSettings();
+    const v = (fallback || s.virtualFrame === false) ? null : VIRTUAL[s.quality];
+    // Kích thước thật của vùng video; khi toàn màn hình lấy theo viewport (tránh giá trị cũ lúc đang chuyển trạng thái)
+    const r = ui.stage.getBoundingClientRect();
+    let sw = r.width, sh = r.height;
+    if (isVideoFull()) { const vv = window.visualViewport; sw = vv ? vv.width : window.innerWidth; sh = vv ? vv.height : window.innerHeight; }
     if (!v || !sw || !sh) { frame.style.cssText = ""; return; }
     const [W, H] = v;
     const sc = Math.min(sw / W, sh / H);
     const w = W * sc, h = H * sc;
-    frame.style.cssText = "border:0;position:absolute;left:" + ((sw - w) / 2) + "px;top:" + ((sh - h) / 2) + "px;width:" + W + "px;height:" + H + "px;transform:scale(" + sc + ");transform-origin:0 0;";
+    frame.style.cssText = "border:0;position:absolute;left:" + Math.round((sw - w) / 2) + "px;top:" + Math.round((sh - h) / 2) + "px;right:auto;bottom:auto;width:" + W + "px;height:" + H + "px;max-width:none;max-height:none;transform:scale(" + sc + ");transform-origin:0 0;";
+  }
+  /* Tính lại vài lần sau khi bố cục đổi (animation, fullscreen, xoay màn) */
+  function rescaleSoon() {
+    applyRenderScale();
+    requestAnimationFrame(applyRenderScale);
+    [120, 400, 800].forEach(ms => setTimeout(applyRenderScale, ms));
   }
 
   /* ---- Phụ đề & chất lượng (YouTube IFrame API) ---- */
@@ -308,17 +318,19 @@ window.Player = (function () {
     // Thử fullscreen thật của trình duyệt cho riêng khung video; nếu không hỗ trợ thì CSS ở trên đã phủ kín màn hình
     const st = ui.stage, req = st.requestFullscreen || st.webkitRequestFullscreen;
     if (req) { try { const p = req.call(st, { navigationUI: "hide" }); p?.catch?.(() => {}); } catch (_) {} }
+    rescaleSoon();
     toast("Chạm 2 lần hoặc vuốt xuống để thoát toàn màn hình", 2200);
   }
   function exitVideoFull() {
     if (!isVideoFull()) return;
     ui.root.classList.remove("video-full"); ui.fs.classList.remove("is-full");
     if (nativeFull() === ui.stage) { try { (document.exitFullscreen || document.webkitExitFullscreen)?.call(document)?.catch?.(() => {}); } catch (_) {} }
+    rescaleSoon();
   }
   function toggleFullscreen() { isVideoFull() ? exitVideoFull() : enterVideoFull(); }
   // Người dùng thoát fullscreen bằng phím Esc / nút hệ thống -> đồng bộ lại trạng thái
   for (const evName of ["fullscreenchange", "webkitfullscreenchange"]) {
-    document.addEventListener(evName, () => { if (!nativeFull() && isVideoFull()) { ui.root.classList.remove("video-full"); ui.fs.classList.remove("is-full"); } });
+    document.addEventListener(evName, () => { if (!nativeFull() && isVideoFull()) { ui.root.classList.remove("video-full"); ui.fs.classList.remove("is-full"); } rescaleSoon(); });
   }
 
   /* ---- Cử chỉ: chạm 2 lần = toàn màn hình, vuốt xuống = thoát toàn màn hình / thu nhỏ trình phát ---- */
@@ -347,7 +359,10 @@ window.Player = (function () {
     });
     ui.gesture.addEventListener("dblclick", (e) => e.preventDefault());
     if (window.ResizeObserver) new ResizeObserver(() => applyRenderScale()).observe(ui.stage);
-    else window.addEventListener("resize", applyRenderScale);
+    window.addEventListener("resize", rescaleSoon);
+    window.addEventListener("orientationchange", rescaleSoon);
+    window.visualViewport?.addEventListener("resize", rescaleSoon);
+    ui.root.addEventListener("transitionend", (e) => { if (e.target === ui.root) rescaleSoon(); });
   }
 
   function expand() { expanded = true; ui.root.classList.add("open"); document.body.classList.add("player-open"); }

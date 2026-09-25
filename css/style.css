@@ -253,7 +253,7 @@ img { display: block; }
 #player.video-full { grid-template-columns: minmax(0, 1fr) !important; grid-template-areas: "main" !important; }
 #player.video-full #queue, #player.video-full #player-controls { display: none !important; }
 #player.video-full #player-main { flex: 1; }
-#player.video-full #player-stage { position: fixed; inset: 0; z-index: 60; aspect-ratio: auto; flex: 1; }
+#player.video-full #player-stage { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; z-index: 60; aspect-ratio: auto; flex: 1; overflow: hidden; }
 #player-stage:fullscreen, #player-stage:-webkit-full-screen { width: 100%; height: 100%; }
 .ic-compress { display: none; }
 .is-full .ic-expand { display: none; }
