@@ -119,6 +119,7 @@ window.Player = (function () {
   };
 
   function onReady() {
+    applyRenderScale();
     if (pendingLoad) { const p = pendingLoad; pendingLoad = null; loadIndex(p); }
   }
   /* Hiện màn che của app khi YouTube đang ở trạng thái có giao diện riêng (tạm dừng, kết thúc, chưa phát) */
@@ -208,6 +209,22 @@ window.Player = (function () {
     m ? yt.mute() : yt.unMute();
     ui.mute.classList.toggle("is-muted", m);
   }
+  /* ---- Ép độ phân giải gián tiếp: render iframe ở kích thước ảo rồi scale bằng CSS ----
+     YouTube chọn chất lượng theo kích thước khung player (viewport bên trong iframe không bị ảnh hưởng bởi transform
+     của trang cha), nên khung 1920×1080 thu nhỏ vẫn được YouTube coi là player 1080p. */
+  const VIRTUAL = { hd2160: [3840, 2160], hd1440: [2560, 1440], hd1080: [1920, 1080], hd720: [1280, 720], large: [854, 480], medium: [640, 360], small: [426, 240] };
+  function applyRenderScale() {
+    const frame = document.getElementById("yt-player");
+    if (!frame || !ui.stage) return;
+    const v = fallback ? null : VIRTUAL[Util.loadSettings().quality];
+    const sw = ui.stage.clientWidth, sh = ui.stage.clientHeight;
+    if (!v || !sw || !sh) { frame.style.cssText = ""; return; }
+    const [W, H] = v;
+    const sc = Math.min(sw / W, sh / H);
+    const w = W * sc, h = H * sc;
+    frame.style.cssText = "border:0;position:absolute;left:" + ((sw - w) / 2) + "px;top:" + ((sh - h) / 2) + "px;width:" + W + "px;height:" + H + "px;transform:scale(" + sc + ");transform-origin:0 0;";
+  }
+
   /* ---- Phụ đề & chất lượng (YouTube IFrame API) ---- */
   const QUALITY_LABEL = { auto: "Tự động", highres: "4K+", hd2160: "2160p (4K)", hd1440: "1440p", hd1080: "1080p", hd720: "720p", large: "480p", medium: "360p", small: "240p", tiny: "144p", default: "Tự động" };
   function ccTracks() { try { return yt.getOption("captions", "tracklist") || []; } catch (_) { return []; } }
@@ -236,6 +253,7 @@ window.Player = (function () {
   }
   function requestQuality(q, silent) {
     if (!yt) return;
+    if (!silent) { Util.saveSettings({ quality: q }); applyRenderScale(); }
     try {
       if (q === "auto") { yt.setPlaybackQualityRange?.("tiny", "highres"); yt.setPlaybackQuality?.("default"); }
       else { yt.setPlaybackQualityRange?.(q, q); yt.setPlaybackQuality?.(q); }
@@ -324,6 +342,8 @@ window.Player = (function () {
       }
     });
     ui.gesture.addEventListener("dblclick", (e) => e.preventDefault());
+    if (window.ResizeObserver) new ResizeObserver(() => applyRenderScale()).observe(ui.stage);
+    else window.addEventListener("resize", applyRenderScale);
   }
 
   function expand() { expanded = true; ui.root.hidden = false; document.body.classList.add("player-open"); }
@@ -346,5 +366,5 @@ window.Player = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", () => { bindUi(); bindGestures(); });
-  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index, setCaptions, requestQuality };
+  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index, setCaptions, requestQuality, applyRenderScale };
 })();
