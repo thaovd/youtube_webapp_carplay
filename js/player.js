@@ -370,5 +370,5 @@ window.Player = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", () => { bindUi(); bindGestures(); });
-  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index, setCaptions, requestQuality, applyRenderScale };
+  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index, setCaptions, requestQuality, applyRenderScale, openSheet };
 })();

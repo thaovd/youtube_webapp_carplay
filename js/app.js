@@ -65,10 +65,12 @@
   let trendingCat = "";
   async function renderHome() {
     const s = Util.loadSettings();
-    const regionSel = el("select", { class: "chip", "aria-label": "Quốc gia", onchange: (e) => { Util.saveSettings({ region: e.target.value }); Api.clearCache(); renderHome(); } },
-      [["VN", "🇻🇳 VN"], ["US", "🇺🇸 US"], ["GB", "🇬🇧 UK"], ["JP", "🇯🇵 JP"], ["KR", "🇰🇷 KR"], ["TH", "🇹🇭 TH"], ["IN", "🇮🇳 IN"], ["DE", "🇩🇪 DE"], ["FR", "🇫🇷 FR"], ["BR", "🇧🇷 BR"]]
-        .map(([v, t]) => el("option", { value: v, text: t, selected: v === s.region })));
-    setChrome("Xu hướng", [regionSel]);
+    const REGIONS = [["VN", "Việt Nam"], ["US", "Hoa Kỳ"], ["GB", "Anh"], ["JP", "Nhật Bản"], ["KR", "Hàn Quốc"], ["TH", "Thái Lan"], ["IN", "Ấn Độ"], ["DE", "Đức"], ["FR", "Pháp"], ["BR", "Brazil"], ["AU", "Úc"], ["CA", "Canada"]];
+    const regionName = (REGIONS.find(r => r[0] === s.region) || [s.region, s.region])[1];
+    const regionBtn = el("button", { class: "chip", type: "button", "aria-label": "Quốc gia", text: "Vùng: " + regionName, onclick: () =>
+      Player.openSheet("Quốc gia / khu vực", REGIONS.map(([v, t]) => ({ label: t, active: v === s.region, onclick: () => { Util.saveSettings({ region: v }); Api.clearCache(); renderHome(); } })))
+    });
+    setChrome("Xu hướng", [regionBtn]);
     loading();
     try {
       // Chip thể loại (một số thể loại không hỗ trợ mostPopular -> bỏ qua khi lỗi)

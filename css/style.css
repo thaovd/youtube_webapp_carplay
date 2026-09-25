@@ -30,7 +30,8 @@
 html[data-scale="large"]  { --fs-base: clamp(18px, 2.9vmin, 28px); --touch: clamp(68px, 10.5vmin, 104px); --card-min: clamp(240px, 30vmin, 360px); }
 html[data-scale="xlarge"] { --fs-base: clamp(20px, 3.4vmin, 32px); --touch: clamp(76px, 12vmin, 116px); --card-min: clamp(280px, 34vmin, 420px); }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; scrollbar-width: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }   /* ẩn mọi thanh cuộn, vẫn cuộn bằng vuốt */
 html, body { height: 100%; margin: 0; overscroll-behavior: none; }
 body {
   background: var(--bg); color: var(--fg);
