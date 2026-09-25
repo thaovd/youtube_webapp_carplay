@@ -39,6 +39,18 @@ php -S 0.0.0.0:8080
 
 Mở `http://localhost:8080` (hoặc IP máy trong LAN từ đầu xe). Với tên miền thật nên dùng HTTPS.
 
+## Triển khai lên GitHub Pages
+
+Repo đã có workflow `.github/workflows/pages.yml`. Để có link công khai:
+
+1. Repo phải **public** (GitHub Pages với repo private cần gói GitHub Pro/Team).
+2. Vào **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. Chạy lại workflow (Actions → Deploy to GitHub Pages → Run workflow) hoặc push một commit mới.
+4. Link sẽ là `https://<user>.github.io/<repo>/`. Thêm link này vào *Authorized JavaScript origins* của OAuth Client ID.
+
+Khi chưa cấu hình Client ID / API key, app chạy ở **chế độ demo** với video mẫu để xem giao diện.
+Nếu script YouTube IFrame API bị chặn, trình phát tự chuyển sang iframe nhúng thường.
+
 ## Lấy Client ID / API key (Google Cloud)
 
 1. Vào <https://console.cloud.google.com>, tạo project, bật **YouTube Data API v3**.

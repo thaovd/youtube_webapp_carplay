@@ -11,6 +11,25 @@ window.Player = (function () {
   let seeking = false;
   let pendingLoad = null;        // video muốn phát trước khi API sẵn sàng
   let expanded = false;
+  let fallback = false;          // true khi IFrame API không tải được -> dùng iframe nhúng thường
+  let fallbackTimer = null;
+
+  /* Nếu script IFrame API không tải được (bị chặn, offline...) sau vài giây thì chuyển sang iframe thường */
+  function armFallback() {
+    if (apiReady || fallback || fallbackTimer) return;
+    fallbackTimer = setTimeout(() => { if (!apiReady) enableFallback(); }, 4000);
+  }
+  function enableFallback() {
+    fallback = true;
+    ui.root.classList.add("fallback");
+    toast("Không tải được trình phát tuỳ biến, dùng trình phát YouTube mặc định");
+    if (pendingLoad !== null) { const p = pendingLoad; pendingLoad = null; loadIndex(p); }
+  }
+  function fallbackLoad(v) {
+    const holder = $("#yt-player");
+    const src = "https://www.youtube.com/embed/" + encodeURIComponent(v.id) + "?autoplay=1&playsinline=1&rel=0&controls=1&hl=" + encodeURIComponent(Util.loadSettings().lang);
+    holder.replaceChildren(el("iframe", { src, allow: "autoplay; encrypted-media; picture-in-picture; fullscreen", allowfullscreen: true, title: v.title, style: "border:0;width:100%;height:100%" }));
+  }
 
   const ui = {};
   function bindUi() {
@@ -71,7 +90,9 @@ window.Player = (function () {
 
   /* Được gọi bởi IFrame API khi tải xong */
   window.onYouTubeIframeAPIReady = function () {
+    if (fallback) return;
     apiReady = true;
+    clearTimeout(fallbackTimer);
     yt = new YT.Player("yt-player", {
       width: "100%", height: "100%",
       playerVars: {
@@ -126,7 +147,7 @@ window.Player = (function () {
   }
   function loadIndex(i) {
     if (i < 0 || i >= queue.length) return;
-    if (!apiReady || !yt?.loadVideoById) { pendingLoad = i; return; }
+    if (!fallback && (!apiReady || !yt?.loadVideoById)) { pendingLoad = i; armFallback(); return; }
     index = i;
     const v = queue[i];
     ui.err.hidden = true;
@@ -134,7 +155,7 @@ window.Player = (function () {
     ui.title.textContent = v.title; ui.channel.textContent = v.channel;
     ui.miniTitle.textContent = v.title; ui.miniChannel.textContent = v.channel; ui.miniThumb.src = v.thumb;
     ui.mini.hidden = false;
-    yt.loadVideoById(v.id);
+    if (fallback) fallbackLoad(v); else yt.loadVideoById(v.id);
     if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: v.title, artist: v.channel, artwork: [{ src: v.thumb }] });
     renderQueue();
     document.dispatchEvent(new CustomEvent("player:track", { detail: v }));
