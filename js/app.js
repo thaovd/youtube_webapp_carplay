@@ -35,12 +35,6 @@
     if (!items.length) return el("div", { class: "state" }, [el("p", { text: emptyMsg })]);
     return el("div", { class: "grid" }, items.map((v, i) => card(v, items, i)));
   }
-  function demoBanner() {
-    return el("div", { class: "demo-banner" }, [
-      el("span", { text: "Chế độ demo: dữ liệu mẫu (video thật vẫn phát được). Đăng nhập Google để xem xu hướng, kênh đăng ký và tìm kiếm thật." }),
-      el("button", { class: "chip", type: "button", text: "Đăng nhập", onclick: doSignIn })
-    ]);
-  }
   function moreButton(fn) {
     const b = el("button", { class: "btn", type: "button", text: "Tải thêm", style: "margin:var(--gap) auto;display:flex" });
     b.onclick = async () => { b.disabled = true; b.textContent = "Đang tải…"; try { await fn(); b.remove(); } catch (e) { showError(e); } };
@@ -87,7 +81,6 @@
       const items = page.items;
       const g = grid(items);
       view.replaceChildren(g);
-      if (demo) view.prepend(demoBanner());
       const addMore = () => { if (page.next) view.append(moreButton(async () => {
         page = await Api.trending({ categoryId: trendingCat, pageToken: page.next });
         const start = items.length; items.push(...page.items);
@@ -156,7 +149,6 @@
         const items = page.items;
         const g = grid(items, { emptyMsg: "Không tìm thấy kết quả." });
         results.replaceChildren(g);
-        if (demo) results.prepend(demoBanner());
         const addMore = () => { if (page.next) results.append(moreButton(async () => {
           page = await Api.search(q, { pageToken: page.next });
           const start = items.length; items.push(...page.items);

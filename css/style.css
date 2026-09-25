@@ -141,10 +141,6 @@ img { display: block; }
 .spinner { width: 2.4em; height: 2.4em; border: 5px solid var(--bg-3); border-top-color: var(--accent); border-radius: 50%; animation: spin .9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Banner demo */
-.demo-banner { display: flex; align-items: center; gap: var(--gap); background: #2a2410; border: 1px solid #6b5a1a; border-radius: var(--radius); padding: calc(var(--gap) * .7) var(--gap); margin-bottom: var(--gap); }
-.demo-banner span { flex: 1; font-size: .9em; }
-
 /* Nút chung */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5em;
