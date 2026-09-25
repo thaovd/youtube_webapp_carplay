@@ -42,6 +42,7 @@ window.Auth = (function () {
           pending?.reject(new Error(resp.error_description || resp.error));
         } else {
           writeToken(resp);
+          try { localStorage.setItem("cartube.wasSignedIn", "1"); } catch (_) {}
           pending?.resolve(resp.access_token);
           loadProfile().finally(emit);
         }
@@ -68,6 +69,7 @@ window.Auth = (function () {
   function signOut() {
     const t = readToken();
     sessionStorage.removeItem(TKEY);
+    try { localStorage.removeItem("cartube.wasSignedIn"); } catch (_) {}
     profile = null;
     if (t && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(t.access_token, () => {});
     emit();

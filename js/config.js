@@ -4,10 +4,11 @@
    ===================================================================== */
 window.CARTUBE_DEFAULTS = {
   // OAuth 2.0 Client ID (Web application) từ Google Cloud Console.
-  // Bắt buộc để đăng nhập và lấy dữ liệu cá nhân (kênh đăng ký, video đã thích, playlist).
-  clientId: "",
+  // Đây là giá trị công khai; bảo vệ bằng "Authorized JavaScript origins" trong Console.
+  clientId: "141361788875-f0g3hn492mnki5kvihbv656bf77epe8r.apps.googleusercontent.com",
 
-  // API key (tuỳ chọn). Dùng để xem "Thịnh hành" và tìm kiếm khi CHƯA đăng nhập.
+  // API key (nâng cao, tuỳ chọn): chỉ cần nếu muốn xem Xu hướng / Tìm kiếm thật khi CHƯA đăng nhập.
+  // Đã đăng nhập thì mọi yêu cầu dùng token OAuth, không cần key.
   apiKey: "",
 
   // Mã vùng cho bảng xếp hạng thịnh hành (VN, US, JP, KR, ...)

@@ -51,16 +51,21 @@ Repo đã có workflow `.github/workflows/pages.yml`. Để có link công khai:
 Khi chưa cấu hình Client ID / API key, app chạy ở **chế độ demo** với video mẫu để xem giao diện.
 Nếu script YouTube IFrame API bị chặn, trình phát tự chuyển sang iframe nhúng thường.
 
-## Lấy Client ID / API key (Google Cloud)
+## Đăng nhập Google
+
+Client ID OAuth đã được cài sẵn trong `js/config.js` (giá trị này là công khai, được bảo vệ bằng danh sách
+*Authorized JavaScript origins* trong Google Cloud Console). Người dùng chỉ cần bấm **Đăng nhập Google**;
+không cần nhập API key. Chưa đăng nhập thì app chạy ở chế độ demo.
+
+Nếu triển khai ở tên miền khác hoặc muốn dùng project Google Cloud riêng:
 
 1. Vào <https://console.cloud.google.com>, tạo project, bật **YouTube Data API v3**.
-2. **OAuth consent screen**: loại External, thêm scope `.../auth/youtube.readonly`, thêm email của bạn vào *Test users*
+2. **OAuth consent screen**: loại External, thêm scope `.../auth/youtube.readonly`, thêm email vào *Test users*
    (hoặc publish app nếu dùng lâu dài).
-3. **Credentials → Create credentials → OAuth client ID → Web application**.
-   Thêm *Authorized JavaScript origins* đúng địa chỉ bạn mở app, ví dụ `http://localhost:8080`, `https://yourdomain.com`.
-4. (Tuỳ chọn) **Create credentials → API key** để xem Thịnh hành / Tìm kiếm khi chưa đăng nhập.
-5. Mở app → **Cài đặt** → dán Client ID (và API key) → Lưu → Đăng nhập Google.
-   Hoặc điền sẵn vào `js/config.js` trước khi triển khai.
+3. **Credentials → Create credentials → OAuth client ID → Web application**, thêm *Authorized JavaScript origins*
+   đúng địa chỉ mở app (ví dụ `http://localhost:8080`, `https://yourdomain.com`).
+4. Dán Client ID vào `js/config.js`, hoặc vào **Cài đặt → Nâng cao** trong app.
+5. (Nâng cao, tuỳ chọn) `apiKey` trong `js/config.js` cho phép xem Xu hướng / Tìm kiếm thật khi chưa đăng nhập.
 
 ## Ghi chú kỹ thuật
 

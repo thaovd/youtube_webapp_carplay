@@ -37,8 +37,8 @@
   }
   function demoBanner() {
     return el("div", { class: "demo-banner" }, [
-      el("span", { text: "Chế độ demo: dữ liệu mẫu (video thật vẫn phát được). Vào Cài đặt để dùng dữ liệu YouTube thật." }),
-      el("button", { class: "chip", type: "button", text: "Cài đặt", onclick: () => navigate("settings") })
+      el("span", { text: "Chế độ demo: dữ liệu mẫu (video thật vẫn phát được). Đăng nhập Google để xem xu hướng, kênh đăng ký và tìm kiếm thật." }),
+      el("button", { class: "chip", type: "button", text: "Đăng nhập", onclick: doSignIn })
     ]);
   }
   function moreButton(fn) {
@@ -49,8 +49,8 @@
   function showError(e) {
     if (e?.reason !== "login_required" && e?.reason !== "no_credentials") console.error(e);
     if (e?.reason === "login_required" || e?.reason === "no_credentials") {
-      stateMsg(e.reason === "login_required" ? "Bạn cần đăng nhập để xem nội dung này." : "Chưa cấu hình. Vào Cài đặt để nhập Client ID (và API key nếu muốn xem không cần đăng nhập).",
-        [el("button", { class: "btn primary", type: "button", text: e.reason === "login_required" ? "Đăng nhập Google" : "Mở Cài đặt", onclick: () => e.reason === "login_required" ? doSignIn() : navigate("settings") })]);
+      stateMsg("Bạn cần đăng nhập Google để xem nội dung này.",
+        [el("button", { class: "btn primary", type: "button", text: "Đăng nhập Google", onclick: doSignIn })]);
     } else if (e?.reason === "quotaExceeded") {
       stateMsg("Hết hạn mức API YouTube trong ngày. Hãy thử lại sau hoặc dùng dự án Google Cloud khác.");
     } else {
@@ -236,9 +236,8 @@
       return wrap;
     };
     const clientId = el("input", { type: "text", value: s.clientId, placeholder: "xxxxx.apps.googleusercontent.com", spellcheck: "false" });
-    const apiKey = el("input", { type: "text", value: s.apiKey, placeholder: "AIza…", spellcheck: "false" });
-    const saveBtn = el("button", { class: "btn primary", type: "button", text: "Lưu thông tin API", onclick: () => {
-      Util.saveSettings({ clientId: clientId.value.trim(), apiKey: apiKey.value.trim() });
+    const saveBtn = el("button", { class: "btn", type: "button", text: "Lưu Client ID", onclick: () => {
+      Util.saveSettings({ clientId: clientId.value.trim() || window.CARTUBE_DEFAULTS.clientId });
       Api.clearCache(); Auth.reconfigure(); toast("Đã lưu"); renderSettings();
     } });
 
@@ -257,19 +256,10 @@
         "Khung video được render ở đúng kích thước này (ví dụ 1920×1080) rồi thu/phóng cho vừa màn hình để YouTube ưu tiên chọn độ phân giải tương ứng. YouTube vẫn có thể hạ xuống nếu mạng yếu."),
       field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); }),
         "YouTube gốc dùng bộ điều khiển của YouTube (có bánh răng chỉnh chất lượng, phụ đề) nhưng nút nhỏ hơn."),
-      field("Google OAuth Client ID", clientId, "Bắt buộc để đăng nhập. Tạo tại Google Cloud Console → APIs & Services → Credentials."),
-      field("YouTube API key (tuỳ chọn)", apiKey, "Cho phép xem Thịnh hành / Tìm kiếm mà không cần đăng nhập."),
+      el("div", { class: "section-title", text: "Nâng cao" }),
+      field("Google OAuth Client ID", clientId, "Đã cài sẵn. Chỉ đổi nếu bạn tự tạo project Google Cloud khác (cần thêm origin " + location.origin + " vào Authorized JavaScript origins). Để trống và Lưu để quay về mặc định."),
       saveBtn,
-      el("div", { class: "help" }, [
-        el("b", { text: "Hướng dẫn nhanh lấy Client ID" }),
-        el("ol", {}, [
-          el("li", { html: "Vào <code>console.cloud.google.com</code>, tạo project, bật <b>YouTube Data API v3</b>." }),
-          el("li", { html: "OAuth consent screen: chọn External, thêm scope <code>youtube.readonly</code>, thêm email của bạn vào Test users." }),
-          el("li", { html: "Credentials → Create → OAuth client ID → Web application. Thêm <b>Authorized JavaScript origins</b>: <code>" + location.origin + "</code>." }),
-          el("li", { text: "Dán Client ID vào ô trên và bấm Lưu, sau đó Đăng nhập Google." })
-        ]),
-        el("small", { class: "muted", text: "Ứng dụng chạy hoàn toàn trên trình duyệt; token chỉ lưu trong phiên hiện tại." })
-      ])
+      el("small", { class: "muted", text: "Ứng dụng chạy hoàn toàn trên trình duyệt, chỉ xin quyền đọc YouTube; token chỉ lưu trong phiên hiện tại." })
     ]));
   }
   function applyScale(v) { document.documentElement.dataset.scale = v || Util.loadSettings().uiScale; }
@@ -277,7 +267,7 @@
   /* ---------- Tài khoản ---------- */
   async function doSignIn() {
     const s = Util.loadSettings();
-    if (!s.clientId) { toast("Hãy nhập Client ID trong Cài đặt trước"); navigate("settings"); return; }
+    if (!s.clientId) { toast("Thiếu Client ID, kiểm tra mục Nâng cao trong Cài đặt"); navigate("settings"); return; }
     try {
       await Auth.signIn({ interactive: true });
       toast("Đăng nhập thành công");
@@ -300,7 +290,7 @@
   // Thử làm mới token ngầm nếu có Client ID (không hiện popup)
   window.addEventListener("load", () => {
     const s = Util.loadSettings();
-    if (s.clientId && !Auth.getToken()) {
+    if (s.clientId && !Auth.getToken() && localStorage.getItem("cartube.wasSignedIn") === "1") {
       setTimeout(() => Auth.signIn({ interactive: false }).then(() => { Api.clearCache(); navigate(currentView, true); }).catch(() => {}), 800);
     }
   });
