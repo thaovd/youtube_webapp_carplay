@@ -42,7 +42,8 @@ window.Player = (function () {
       play: $("#btn-play"), prev: $("#btn-prev"), next: $("#btn-next"), rew: $("#btn-rew"), fwd: $("#btn-fwd"),
       mute: $("#btn-mute"), fs: $("#btn-fullscreen"), close: $("#btn-close-player"), qToggle: $("#btn-queue-toggle"),
       queueList: $("#queue-list"), gesture: $("#gesture-layer"), main: $("#player-main"),
-      cc: $("#btn-cc"), quality: $("#btn-quality"), sheet: $("#sheet"), sheetTitle: $("#sheet-title"), sheetList: $("#sheet-list"),
+      cc: $("#btn-cc"), quality: $("#btn-quality"),
+      cover: $("#pause-cover"), coverImg: $("#cover-img"), coverActions: $("#cover-actions"), sheet: $("#sheet"), sheetTitle: $("#sheet-title"), sheetList: $("#sheet-list"),
       mini: $("#minibar"), miniThumb: $("#mini-thumb"), miniTitle: $("#mini-title"), miniChannel: $("#mini-channel"),
       miniPlay: $("#mini-play"), miniNext: $("#mini-next"), miniExpand: $("#mini-expand")
     });
@@ -54,6 +55,8 @@ window.Player = (function () {
     ui.fwd.onclick = () => seekBy(10);
     ui.mute.onclick = toggleMute;
     ui.cc.onclick = openCaptionSheet;
+    $("#cover-replay").onclick = () => { if (yt?.seekTo) { yt.seekTo(0, true); yt.playVideo(); } };
+    $("#cover-next").onclick = next;
     ui.quality.onclick = openQualitySheet;
     $("#sheet-close").onclick = closeSheet;
     ui.sheet.querySelector(".sheet-backdrop").onclick = closeSheet;
@@ -118,9 +121,20 @@ window.Player = (function () {
   function onReady() {
     if (pendingLoad) { const p = pendingLoad; pendingLoad = null; loadIndex(p); }
   }
+  /* Hiện màn che của app khi YouTube đang ở trạng thái có giao diện riêng (tạm dừng, kết thúc, chưa phát) */
+  function setCover(state) {
+    const S = YT.PlayerState;
+    const ended = state === S.ENDED;
+    const show = !fallback && (state === S.PAUSED || ended || state === S.CUED || state === S.UNSTARTED);
+    ui.cover.hidden = !show;
+    ui.coverActions.hidden = !ended;
+    ui.cover.querySelector(".cover-play").toggleAttribute("hidden", ended);
+    ui.root.classList.toggle("ended", ended);
+  }
   function onStateChange(e) {
     const S = YT.PlayerState;
     const playing = e.data === S.PLAYING;
+    setCover(e.data);
     ui.play.classList.toggle("is-playing", playing);
     ui.miniPlay.classList.toggle("is-playing", playing);
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
@@ -167,6 +181,8 @@ window.Player = (function () {
     ui.seek.value = 0; updateSeekStyle(); ui.cur.textContent = "0:00"; ui.dur.textContent = fmtTime(v.duration);
     ui.title.textContent = v.title; ui.channel.textContent = v.channel;
     ui.miniTitle.textContent = v.title; ui.miniChannel.textContent = v.channel; ui.miniThumb.src = v.thumb;
+    ui.coverImg.src = v.thumb;
+    if (!fallback) { ui.cover.hidden = false; ui.coverActions.hidden = true; ui.cover.querySelector(".cover-play").toggleAttribute("hidden", true); ui.root.classList.remove("ended"); }
     ui.mini.hidden = false;
     if (fallback) fallbackLoad(v); else yt.loadVideoById(v.id);
     if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: v.title, artist: v.channel, artwork: [{ src: v.thumb }] });

@@ -81,6 +81,17 @@
     <div id="player-main">
       <div id="player-stage">
         <div id="yt-player"></div>
+        <!-- Màn che của app khi video tạm dừng / kết thúc: che giao diện tạm dừng của YouTube (tiêu đề, video khác, chia sẻ) -->
+        <div id="pause-cover" hidden>
+          <img id="cover-img" alt="">
+          <div class="cover-center">
+            <svg class="cover-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <div class="cover-actions" id="cover-actions" hidden>
+              <button class="btn" id="cover-replay" type="button">↻ Phát lại</button>
+              <button class="btn primary" id="cover-next" type="button">Video tiếp theo ▶</button>
+            </div>
+          </div>
+        </div>
         <div id="gesture-layer" aria-hidden="true"></div>
         <div id="player-error" hidden>
           <p>Video này không cho phép phát nhúng.</p>

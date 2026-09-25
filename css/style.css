@@ -232,6 +232,15 @@ img { display: block; }
 #player-main { grid-area: main; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 #player-stage { flex: 1; min-height: 0; position: relative; background: #000; }
 #player-stage iframe, #yt-player { position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Màn che khi tạm dừng / kết thúc / chưa phát */
+#pause-cover { position: absolute; inset: 0; z-index: 1; background: #000; pointer-events: none; overflow: hidden; }
+#cover-img { width: 100%; height: 100%; object-fit: cover; filter: blur(14px) brightness(.45); transform: scale(1.08); }
+.cover-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--gap); }
+.cover-play { font-size: clamp(64px, 16vmin, 150px); color: var(--fg); filter: drop-shadow(0 4px 16px rgba(0,0,0,.7)); }
+.cover-actions { display: flex; gap: var(--gap); flex-wrap: wrap; justify-content: center; pointer-events: auto; }
+#player.ended #gesture-layer { pointer-events: none; }
+#player.ended #pause-cover { pointer-events: auto; }
+
 /* Lớp trong suốt phủ lên video để bắt cử chỉ (iframe không chuyển sự kiện chạm lên trang cha) */
 #gesture-layer { position: absolute; inset: 0; z-index: 2; touch-action: none; }
 #player.fallback #gesture-layer { height: 28%; }   /* iframe thường có nút riêng của YouTube: chỉ phủ dải trên */
