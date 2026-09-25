@@ -261,7 +261,9 @@
       navigate(currentView === "settings" ? "subs" : currentView, true);
     } catch (e) {
       if (e.message === "no_client") toast("Chưa tải được thư viện Google, thử lại sau");
-      else toast("Đăng nhập thất bại: " + e.message);
+      else if (e.message === "popup_closed" || e.message === "access_denied") toast("Đăng nhập thất bại");
+      else toast("Đăng nhập thất bại");
+      console.warn("Đăng nhập thất bại:", e.message);
     }
   }
   $("#btn-account").addEventListener("click", () => { Player.collapse(); Auth.getState().signedIn ? navigate("settings") : doSignIn(); });
