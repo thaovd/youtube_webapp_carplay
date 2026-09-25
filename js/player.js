@@ -123,9 +123,9 @@ window.Player = (function () {
       events: { onReady, onStateChange, onError }
     });
     if (dual) {
-      // Trình phát tiếng: khung 2px (YouTube tự chọn chất lượng thấp nhất), không phụ đề
+      // Trình phát tiếng: khung 160×90 khuất sau hình (YouTube chọn 144p), không phụ đề
       ya = new YT.Player("yt-audio", {
-        width: "2", height: "2",
+        width: "160", height: "90",
         playerVars: Object.assign({}, base, { cc_load_policy: 0 }),
         events: { onReady: () => { audioReady = true; if (pendingLoad !== null) onReady(); }, onStateChange: onAudioState }
       });
@@ -139,22 +139,25 @@ window.Player = (function () {
      Vì vậy: chỉ ép tua ở các mốc rõ ràng (bắt đầu phát, sau khi tua, sau khi dừng), còn lúc đang phát thì
      gom nhiều mẫu, lấy trung vị, và chỉ chỉnh khi lệch thật > 300 ms, cách nhau tối thiểu 3 giây. */
   let driftSamples = [];
+  let videoBufferingSince = 0;
   function forceSync() {
     if (!dual || !ya?.seekTo || !yt?.getCurrentTime) return;
     ya.seekTo(Math.max(0, yt.getCurrentTime() - avOffset), true);
     lastSync = Date.now(); driftSamples = [];
   }
+  /* Hai trình phát trên cùng thiết bị chạy cùng tốc độ nên gần như không trôi. Chỉ can thiệp khi lệch THẬT
+     (một bên bị khựng/tải lại): trung vị của 20 mẫu (~10 giây) vượt 1 giây, và cách lần trước ≥ 10 giây. */
   function sampleDrift() {
     if (!dual || !ya?.getCurrentTime || !yt?.getCurrentTime) return;
-    if (ya.getPlayerState?.() !== YT.PlayerState.PLAYING) return;
+    if (ya.getPlayerState?.() !== YT.PlayerState.PLAYING || yt.getPlayerState?.() !== YT.PlayerState.PLAYING) { driftSamples = []; return; }
     const now = Date.now();
-    if (now - lastSync < 3000) return;                       // vừa tua xong, chờ ổn định
+    if (now - lastSync < 10000) return;
     driftSamples.push(ya.getCurrentTime() - (yt.getCurrentTime() - avOffset));
-    if (driftSamples.length < 6) return;                     // 6 mẫu ≈ 3 giây
+    if (driftSamples.length < 20) return;
     const sorted = driftSamples.slice().sort((a, b) => a - b);
     const median = sorted[Math.floor(sorted.length / 2)];
     driftSamples = [];
-    if (Math.abs(median) > 0.3) { ya.seekTo(Math.max(0, ya.getCurrentTime() - median), true); lastSync = now; }
+    if (Math.abs(median) > 1.0) { ya.seekTo(Math.max(0, ya.getCurrentTime() - median), true); lastSync = now; }
   }
   function onAudioState(e) {
     const S = YT.PlayerState;
@@ -186,8 +189,15 @@ window.Player = (function () {
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
     if (playing) { ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); if (!prefsApplied) { prefsApplied = true; setTimeout(applyPrefs, 600); } } else stopTicker();
     if (dual && ya?.playVideo) {
-      if (playing) { forceSync(); ya.playVideo(); }          // bắt đầu / tiếp tục phát: canh lại một lần
-      else if (e.data === S.PAUSED || e.data === S.BUFFERING || e.data === S.ENDED) ya.pauseVideo();
+      if (playing) {
+        // Tải đệm ngắn (< 1,5 s) của hình: không đụng vào tiếng để tránh khựng; dài hơn thì canh lại một lần
+        const shortRebuffer = videoBufferingSince && Date.now() - videoBufferingSince < 1500 && ya.getPlayerState?.() === S.PLAYING;
+        videoBufferingSince = 0;
+        if (!shortRebuffer) { forceSync(); ya.playVideo(); }
+      } else if (e.data === S.BUFFERING) {
+        videoBufferingSince = Date.now();
+        setTimeout(() => { if (videoBufferingSince && yt.getPlayerState?.() === S.BUFFERING) ya.pauseVideo(); }, 1500);
+      } else if (e.data === S.PAUSED || e.data === S.ENDED) { videoBufferingSince = 0; ya.pauseVideo(); }
     }
     if (e.data === S.ENDED) { if (Util.loadSettings().autoplayNext) next(); }
   }
