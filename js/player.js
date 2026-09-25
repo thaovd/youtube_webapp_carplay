@@ -65,6 +65,8 @@ window.Player = (function () {
     ui.fs.onclick = toggleFullscreen;
     ui.close.onclick = collapse;
     ui.miniExpand.onclick = expand;
+    // Bấm bất kỳ chỗ nào trên minibar (trừ các nút điều khiển) đều mở trình phát
+    ui.mini.addEventListener("click", (e) => { if (!e.target.closest(".ctl")) expand(); });
     ui.qToggle.onclick = () => {
       // Màn 21:9 và màn dọc: hàng đợi mặc định hiện (dùng lớp hide-queue); còn lại mặc định ẩn (show-queue)
       const shownByDefault = matchMedia("(min-aspect-ratio: 2/1)").matches || matchMedia("(orientation: portrait)").matches;
@@ -183,8 +185,9 @@ window.Player = (function () {
     ui.coverImg.src = v.thumb;
     if (!fallback) { ui.cover.hidden = false; ui.coverActions.hidden = true; ui.cover.querySelector(".cover-play").toggleAttribute("hidden", true); ui.root.classList.remove("ended"); }
     ui.mini.hidden = false;
-    if (!fallback && (!apiReady || !yt?.loadVideoById)) { pendingLoad = i; armFallback(); return; }
     index = i;
+    renderQueue();
+    if (!fallback && (!apiReady || !yt?.loadVideoById)) { pendingLoad = i; armFallback(); return; }
     prefsApplied = false;
     if (fallback) fallbackLoad(v); else yt.loadVideoById(v.id);
     if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: v.title, artist: v.channel, artwork: [{ src: v.thumb }] });
@@ -347,8 +350,8 @@ window.Player = (function () {
     else window.addEventListener("resize", applyRenderScale);
   }
 
-  function expand() { expanded = true; ui.root.hidden = false; document.body.classList.add("player-open"); }
-  function collapse() { exitVideoFull(); expanded = false; ui.root.hidden = true; document.body.classList.remove("player-open"); }
+  function expand() { expanded = true; ui.root.classList.add("open"); document.body.classList.add("player-open"); }
+  function collapse() { exitVideoFull(); expanded = false; ui.root.classList.remove("open"); document.body.classList.remove("player-open"); }
   function isExpanded() { return expanded; }
 
   function renderQueue() {

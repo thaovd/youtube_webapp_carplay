@@ -216,7 +216,7 @@ img { display: block; }
 
 /* ---------- Mini bar ---------- */
 #minibar {
-  grid-area: mini; display: flex; align-items: center; gap: var(--gap);
+  grid-area: mini; display: flex; align-items: center; gap: var(--gap); cursor: pointer;
   background: var(--bg-2); border-top: 1px solid #2e2e2e; padding: calc(var(--gap) * .6) var(--gap) calc(var(--gap) * .6 + var(--safe-b));
 }
 #mini-thumb { width: calc(var(--touch) * 1.5); aspect-ratio: 16/9; object-fit: cover; border-radius: 8px; background: #000; }
@@ -229,7 +229,12 @@ img { display: block; }
   grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr); grid-template-areas: "main queue";
   padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l);
   --qw-open: clamp(300px, 30vw, 480px);      /* độ rộng hàng đợi khi mở (màn ngang) */
+  /* Đóng: trượt xuống dưới màn hình và ẩn; mở: trượt lên (.open) */
+  transform: translateY(100%); opacity: 0; visibility: hidden; pointer-events: none;
+  transition: transform .34s cubic-bezier(.2, .8, .2, 1), opacity .22s ease, visibility 0s linear .34s;
 }
+#player.open { transform: none; opacity: 1; visibility: visible; pointer-events: auto; transition: transform .34s cubic-bezier(.2, .8, .2, 1), opacity .18s ease, visibility 0s; }
+@media (prefers-reduced-motion: reduce) { #player { transition: none !important; } }
 #player-main { grid-area: main; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 #player-stage { flex: 1; min-height: 0; position: relative; background: #000; }
 #player-stage iframe, #yt-player { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
