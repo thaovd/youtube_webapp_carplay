@@ -33,6 +33,10 @@ window.CARTUBE_DEFAULTS = {
   // Ép chất lượng bằng "khung ảo" (render iframe ở đúng kích thước rồi thu nhỏ). Tắt nếu thiết bị hiển thị video lệch.
   virtualFrame: true,
 
+  // Bù trễ tiếng (ms). 0 = tắt. Dương = tiếng phát chậm lại (khi hình trên xe chậm hơn tiếng), âm = tiếng sớm hơn.
+  // Khác 0 sẽ chạy 2 trình phát song song (một hình, một tiếng) - thử nghiệm.
+  avOffsetMs: 0,
+
   // Trình phát: custom (nút lớn, tuỳ biến) | native (trình phát YouTube gốc, có menu chất lượng/phụ đề của YouTube)
   playerMode: "custom",
 

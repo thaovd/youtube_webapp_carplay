@@ -243,6 +243,23 @@
       field("Ngôn ngữ phụ đề ưu tiên", seg("captionLang", [["vi", "Tiếng Việt"], ["en", "English"], ["ja", "日本語"], ["ko", "한국어"]])),
       field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]], () => Player.applyRenderScale())),
       field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale())),
+      field("Bù trễ tiếng", (() => {
+        const cur = +s.avOffsetMs || 0;
+        const label = cur === 0 ? "Tắt" : (cur > 0 ? "Tiếng chậm " + cur + " ms" : "Tiếng sớm " + (-cur) + " ms");
+        const set = (ms) => {
+          ms = Math.max(-2000, Math.min(2000, ms));
+          const needReload = Player.setAvOffset(ms);
+          if (needReload) { toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); } else renderSettings();
+        };
+        return el("div", { class: "stepper" }, [
+          el("button", { class: "btn", type: "button", text: "−100", onclick: () => set(cur - 100) }),
+          el("button", { class: "btn", type: "button", text: "−25", onclick: () => set(cur - 25) }),
+          el("span", { class: "btn val", text: label }),
+          el("button", { class: "btn", type: "button", text: "+25", onclick: () => set(cur + 25) }),
+          el("button", { class: "btn", type: "button", text: "+100", onclick: () => set(cur + 100) }),
+          el("button", { class: "btn" + (cur === 0 ? " primary" : ""), type: "button", text: "Tắt", onclick: () => set(0) })
+        ]);
+      })()),
       field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
       field("Phiên bản", el("div", { class: "btn-row" }, [
         el("span", { class: "btn", text: "Bản " + (window.CARTUBE_BUILD.startsWith("__") ? "cục bộ" : window.CARTUBE_BUILD) }),
