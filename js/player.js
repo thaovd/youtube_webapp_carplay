@@ -327,6 +327,18 @@ window.Player = (function () {
     openSheet("Chất lượng video (đang phát: " + (QUALITY_LABEL[cur] || cur) + ")", items);
   }
 
+  /* Hiệu ứng "−10s / +10s"; chạm liên tiếp cộng dồn số giây hiển thị */
+  let hintTimer = null, hintSum = 0, hintSide = "";
+  function showSeekHint(side) {
+    const el = $("#seek-hint");
+    if (side !== hintSide) hintSum = 0;
+    hintSide = side; hintSum += 10;
+    el.className = side + " show";
+    el.querySelector("span").textContent = (side === "left" ? "−" : "+") + hintSum + "s";
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { el.classList.remove("show"); hintSum = 0; hintSide = ""; }, 650);
+  }
+
   /* ---- Toàn màn hình chỉ vùng video ---- */
   function isVideoFull() { return ui.root.classList.contains("video-full"); }
   function nativeFull() { return document.fullscreenElement || document.webkitFullscreenElement || null; }
@@ -388,7 +400,15 @@ window.Player = (function () {
       if (dt < 800 && vertical && dy < -SWIPE && onVideo) { enterVideoFull(); return; }   // vuốt lên trên video = toàn màn hình
       if (onVideo && Math.hypot(dx, dy) < TAP) {
         const now = Date.now();
-        if (now - lastTap < DOUBLE_MS) { clearTimeout(tapTimer); lastTap = 0; toggleFullscreen(); }
+        if (now - lastTap < DOUBLE_MS) {
+          clearTimeout(tapTimer); lastTap = 0;
+          // Chạm 2 lần: 1/3 trái = lùi 10s, 1/3 phải = tiến 10s, ở giữa = toàn màn hình
+          const gr = ui.gesture.getBoundingClientRect();
+          const fx = (e.clientX - gr.left) / gr.width;
+          if (fx < 1 / 3) { seekBy(-10); showSeekHint("left"); }
+          else if (fx > 2 / 3) { seekBy(10); showSeekHint("right"); }
+          else toggleFullscreen();
+        }
         else { lastTap = now; tapTimer = setTimeout(() => { if (!fallback) toggle(); }, DOUBLE_MS); }  // chạm 1 lần = phát/dừng
       }
     });
