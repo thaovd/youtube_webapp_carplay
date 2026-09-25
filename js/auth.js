@@ -86,5 +86,35 @@ window.Auth = (function () {
   /* Gọi lại khi người dùng đổi Client ID trong Cài đặt */
   function reconfigure() { tokenClient = null; initClient(); emit(); }
 
-  return { onGisLoaded, signIn, signOut, getToken, getState, onChange, reconfigure };
+  /* ---- Đăng nhập kiểu chuyển hướng (không cần popup) – dùng khi popup bị chặn/đóng, phổ biến trên mobile & trình duyệt ô tô ----
+     Google chuyển về đúng URL của app kèm #access_token=... ; URL này phải nằm trong "Authorized redirect URIs" của Client ID. */
+  const SKEY = "cartube.oauth_state";
+  function redirectUri() { return location.origin + location.pathname; }
+  function redirectSignIn() {
+    const { clientId } = Util.loadSettings();
+    if (!clientId) return;
+    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    try { sessionStorage.setItem(SKEY, state); } catch (_) {}
+    const q = new URLSearchParams({
+      client_id: clientId, redirect_uri: redirectUri(), response_type: "token", scope: window.CARTUBE_SCOPES,
+      include_granted_scopes: "true", state, prompt: "select_account"
+    });
+    location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + q.toString());
+  }
+  /* Đọc token từ URL sau khi Google chuyển hướng về. Trả về: "ok" | "error:<mã>" | null (không phải lượt quay về) */
+  function consumeRedirect() {
+    const h = location.hash || "";
+    if (!/access_token=|error=/.test(h)) return null;
+    const p = new URLSearchParams(h.slice(1));
+    let expected = null; try { expected = sessionStorage.getItem(SKEY); sessionStorage.removeItem(SKEY); } catch (_) {}
+    history.replaceState(null, "", location.pathname + location.search);   // xoá token khỏi thanh địa chỉ / lịch sử
+    if (p.get("error")) return "error:" + p.get("error");
+    if (!p.get("access_token") || (expected && p.get("state") !== expected)) return "error:state_mismatch";
+    writeToken({ access_token: p.get("access_token"), expires_in: p.get("expires_in") });
+    try { localStorage.setItem("cartube.wasSignedIn", "1"); } catch (_) {}
+    return "ok";
+  }
+  const redirectResult = consumeRedirect();
+
+  return { onGisLoaded, signIn, signOut, getToken, getState, onChange, reconfigure, redirectSignIn, redirectUri, redirectResult };
 })();

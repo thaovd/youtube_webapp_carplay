@@ -63,7 +63,9 @@ Nếu triển khai ở tên miền khác hoặc muốn dùng project Google Clou
 2. **OAuth consent screen**: loại External, thêm scope `.../auth/youtube.readonly`, thêm email vào *Test users*
    (hoặc publish app nếu dùng lâu dài).
 3. **Credentials → Create credentials → OAuth client ID → Web application**, thêm *Authorized JavaScript origins*
-   đúng địa chỉ mở app (ví dụ `http://localhost:8080`, `https://yourdomain.com`).
+   đúng địa chỉ mở app (ví dụ `http://localhost:8080`, `https://yourdomain.com`) **và** *Authorized redirect URIs*
+   đúng URL trang app (ví dụ `https://thaovd.github.io/youtube_webapp_carplay/`) để đăng nhập kiểu chuyển hướng
+   hoạt động khi trình duyệt chặn popup (mobile, trình duyệt ô tô).
 4. Dán Client ID vào `js/config.js`.
 5. (Nâng cao, tuỳ chọn) `apiKey` trong `js/config.js` cho phép xem Xu hướng / Tìm kiếm thật khi chưa đăng nhập.
 

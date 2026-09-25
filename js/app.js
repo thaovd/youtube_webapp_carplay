@@ -260,11 +260,24 @@
       Api.clearCache(); subsCache = null;
       navigate(currentView === "settings" ? "subs" : currentView, true);
     } catch (e) {
-      if (e.message === "no_client") toast("Chưa tải được thư viện Google, thử lại sau");
-      else if (e.message === "popup_closed" || e.message === "access_denied") toast("Đăng nhập thất bại");
-      else toast("Đăng nhập thất bại");
       console.warn("Đăng nhập thất bại:", e.message);
+      const code = e.message || "";
+      if (code === "no_client") { toast("Chưa tải được thư viện Google, thử lại sau"); return; }
+      if (code === "access_denied") { toast("Bạn đã từ chối cấp quyền"); return; }
+      // Popup bị đóng / bị chặn (hay gặp trên mobile, trình duyệt ô tô): chuyển sang đăng nhập kiểu chuyển hướng
+      if (/popup|closed|blocked|open/i.test(code)) {
+        toast("Cửa sổ đăng nhập bị đóng, đang chuyển sang trang đăng nhập Google…", 2000);
+        setTimeout(Auth.redirectSignIn, 900);
+        return;
+      }
+      toast("Đăng nhập thất bại: " + code, 4000);
     }
+  }
+  // Kết quả khi quay về từ trang đăng nhập Google (kiểu chuyển hướng)
+  if (Auth.redirectResult === "ok") { toast("Đăng nhập thành công"); }
+  else if (Auth.redirectResult && Auth.redirectResult.startsWith("error:")) {
+    const c = Auth.redirectResult.slice(6);
+    toast(c === "access_denied" ? "Bạn đã từ chối cấp quyền" : c === "redirect_uri_mismatch" ? "Chưa thêm redirect URI " + Auth.redirectUri() + " trong Google Console" : "Đăng nhập thất bại: " + c, 5000);
   }
   $("#btn-account").addEventListener("click", () => { Player.collapse(); Auth.getState().signedIn ? navigate("settings") : doSignIn(); });
   Auth.onChange((st) => {
