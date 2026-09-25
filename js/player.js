@@ -134,18 +134,32 @@ window.Player = (function () {
   let audioReady = false;
   function bothReady() { return !!yt?.loadVideoById && (!dual || (audioReady && !!ya?.loadVideoById)); }
 
-  /* ---- Đồng bộ trình phát tiếng theo hình: tiếng = hình − offset ---- */
-  function syncAudio(force) {
+  /* ---- Đồng bộ trình phát tiếng theo hình: tiếng = hình − offset ----
+     Thời gian do IFrame API báo về chỉ cập nhật ~4 lần/giây nên hai trình phát luôn "lệch giả" vài trăm ms.
+     Vì vậy: chỉ ép tua ở các mốc rõ ràng (bắt đầu phát, sau khi tua, sau khi dừng), còn lúc đang phát thì
+     gom nhiều mẫu, lấy trung vị, và chỉ chỉnh khi lệch thật > 300 ms, cách nhau tối thiểu 3 giây. */
+  let driftSamples = [];
+  function forceSync() {
+    if (!dual || !ya?.seekTo || !yt?.getCurrentTime) return;
+    ya.seekTo(Math.max(0, yt.getCurrentTime() - avOffset), true);
+    lastSync = Date.now(); driftSamples = [];
+  }
+  function sampleDrift() {
     if (!dual || !ya?.getCurrentTime || !yt?.getCurrentTime) return;
-    const target = Math.max(0, yt.getCurrentTime() - avOffset);
-    const diff = ya.getCurrentTime() - target;
+    if (ya.getPlayerState?.() !== YT.PlayerState.PLAYING) return;
     const now = Date.now();
-    if (force || (Math.abs(diff) > 0.12 && now - lastSync > 1000)) { ya.seekTo(target, true); lastSync = now; }
+    if (now - lastSync < 3000) return;                       // vừa tua xong, chờ ổn định
+    driftSamples.push(ya.getCurrentTime() - (yt.getCurrentTime() - avOffset));
+    if (driftSamples.length < 6) return;                     // 6 mẫu ≈ 3 giây
+    const sorted = driftSamples.slice().sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    driftSamples = [];
+    if (Math.abs(median) > 0.3) { ya.seekTo(Math.max(0, ya.getCurrentTime() - median), true); lastSync = now; }
   }
   function onAudioState(e) {
     const S = YT.PlayerState;
-    // Tiếng vừa sẵn sàng phát lại (sau buffering/seek): canh lại theo hình
-    if (e.data === S.PLAYING) { syncAudio(true); if (yt?.getPlayerState?.() !== S.PLAYING) ya.pauseVideo(); }
+    // Không tua ở đây (tránh vòng lặp tua -> buffering -> playing -> tua); chỉ giữ trạng thái dừng khớp với hình
+    if (e.data === S.PLAYING && yt?.getPlayerState?.() !== S.PLAYING) ya.pauseVideo();
   }
 
   function onReady() {
@@ -172,7 +186,7 @@ window.Player = (function () {
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
     if (playing) { ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); if (!prefsApplied) { prefsApplied = true; setTimeout(applyPrefs, 600); } } else stopTicker();
     if (dual && ya?.playVideo) {
-      if (playing) { syncAudio(true); ya.playVideo(); }
+      if (playing) { forceSync(); ya.playVideo(); }          // bắt đầu / tiếp tục phát: canh lại một lần
       else if (e.data === S.PAUSED || e.data === S.BUFFERING || e.data === S.ENDED) ya.pauseVideo();
     }
     if (e.data === S.ENDED) { if (Util.loadSettings().autoplayNext) next(); }
@@ -195,7 +209,7 @@ window.Player = (function () {
       const cur = yt.getCurrentTime(), dur = yt.getDuration() || 0;
       ui.cur.textContent = fmtTime(cur);
       if (dur) { ui.seek.value = Math.round((cur / dur) * 1000); updateSeekStyle(); }
-      syncAudio(false);
+      sampleDrift();
     }, 500);
   }
   function stopTicker() { clearInterval(ticker); ticker = null; }
@@ -261,7 +275,7 @@ window.Player = (function () {
   function setAvOffset(ms) {
     const wasDual = dual, nextDual = ms !== 0;
     Util.saveSettings({ avOffsetMs: ms });
-    if (wasDual === nextDual) { avOffset = ms / 1000; if (dual) syncAudio(true); return false; }
+    if (wasDual === nextDual) { avOffset = ms / 1000; if (dual) forceSync(); return false; }
     return true;   // cần reload
   }
   /* ---- Ép độ phân giải gián tiếp: render iframe ở kích thước ảo rồi scale bằng CSS ----
