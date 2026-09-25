@@ -245,6 +245,10 @@
         "Khung video được render ở đúng kích thước này (ví dụ 1920×1080) rồi thu/phóng cho vừa màn hình để YouTube ưu tiên chọn độ phân giải tương ứng. YouTube vẫn có thể hạ xuống nếu mạng yếu."),
       field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); }),
         "YouTube gốc dùng bộ điều khiển của YouTube (có bánh răng chỉnh chất lượng, phụ đề) nhưng nút nhỏ hơn."),
+      field("Phiên bản", el("div", { class: "btn-row" }, [
+        el("span", { class: "btn", text: "Bản " + (window.CARTUBE_BUILD.startsWith("__") ? "cục bộ" : window.CARTUBE_BUILD) }),
+        el("button", { class: "btn primary", type: "button", text: "Tải lại bản mới", onclick: async () => { const updated = await checkForUpdate(false); if (!updated) setTimeout(hardReload, 600); } })
+      ]), "Nếu giao diện không cập nhật sau khi có thay đổi, bấm nút này để bỏ qua cache của trình duyệt."),
       el("small", { class: "muted", text: "Ứng dụng chạy hoàn toàn trên trình duyệt, chỉ xin quyền đọc YouTube; token chỉ lưu trong phiên hiện tại." })
     ]));
   }
@@ -285,6 +289,36 @@
     if (st.signedIn && st.profile?.avatar) { av.src = st.profile.avatar; av.hidden = false; ic.hidden = true; lb.textContent = st.profile.name.split(" ")[0]; }
     else { av.hidden = true; ic.hidden = false; lb.textContent = st.signedIn ? "Tài khoản" : "Đăng nhập"; }
   });
+
+  /* ---------- Kiểm tra bản mới (chống cache trên mobile) ---------- */
+  function hardReload() {
+    // Tải lại kèm tham số ngẫu nhiên để trình duyệt bỏ qua cache của index.html
+    const u = new URL(location.href); u.searchParams.set("r", Date.now().toString(36)); u.hash = "";
+    location.replace(u.toString());
+  }
+  async function checkForUpdate(silent = true) {
+    const build = window.CARTUBE_BUILD;
+    if (!build || build.startsWith("__")) { if (!silent) toast("Bản chạy cục bộ, không có thông tin phiên bản"); return false; }
+    try {
+      const res = await fetch("version.txt?t=" + Date.now(), { cache: "no-store" });
+      if (!res.ok) return false;
+      const latest = (await res.text()).trim();
+      if (latest && latest !== build) {
+        // Chốt an toàn: nếu vừa tải lại vì lý do này trong 2 phút mà vẫn cũ thì không lặp nữa
+        let last = 0; try { last = +sessionStorage.getItem("cartube.updReload") || 0; } catch (_) {}
+        if (Date.now() - last < 120_000) { if (!silent) toast("Máy chủ vẫn trả bản cũ, thử lại sau ít phút"); return false; }
+        try { sessionStorage.setItem("cartube.updReload", String(Date.now())); } catch (_) {}
+        toast("Có bản mới (" + latest + "), đang tải lại…", 2500);
+        setTimeout(hardReload, 1200);
+        return true;
+      }
+      if (!silent) toast("Bạn đang dùng bản mới nhất (" + build + ")");
+    } catch (_) { if (!silent) toast("Không kiểm tra được phiên bản"); }
+    return false;
+  }
+  window.addEventListener("load", () => setTimeout(() => checkForUpdate(true), 1500));
+  // Quay lại tab / mở lại app sau khi để nền: kiểm tra lại
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") checkForUpdate(true); });
 
   /* ---------- Khởi động ---------- */
   applyScale();

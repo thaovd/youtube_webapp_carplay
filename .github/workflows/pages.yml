@@ -22,6 +22,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: Stamp build id (cache busting)
+        run: |
+          BUILD="${GITHUB_SHA::7}"
+          sed -i "s/__BUILD__/$BUILD/g" index.html js/config.js
+          echo "$BUILD" > version.txt
+          echo "Build $BUILD"
       - uses: actions/configure-pages@v5
         with:
           enablement: true

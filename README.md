@@ -48,7 +48,10 @@ Repo đã có workflow `.github/workflows/pages.yml`. Để có link công khai:
 3. Chạy lại workflow (Actions → Deploy to GitHub Pages → Run workflow) hoặc push một commit mới.
 4. Link sẽ là `https://<user>.github.io/<repo>/`. Thêm link này vào *Authorized JavaScript origins* của OAuth Client ID.
 
-Khi chưa cấu hình Client ID / API key, app chạy ở **chế độ demo** với video mẫu để xem giao diện.
+Workflow gắn mã commit vào các file tài nguyên (`?v=abc1234`) và tạo `version.txt`; app kiểm tra file này khi mở
+và tự tải lại nếu có bản mới, nên trình duyệt mobile không bị kẹt bản cũ. Trong Cài đặt có nút "Tải lại bản mới".
+
+Khi chưa đăng nhập, app chạy ở **chế độ demo** với video mẫu để xem giao diện.
 Nếu script YouTube IFrame API bị chặn, trình phát tự chuyển sang iframe nhúng thường.
 
 ## Đăng nhập Google

@@ -38,4 +38,7 @@ window.CARTUBE_DEFAULTS = {
   pageSize: 24
 };
 
+// Mã bản dựng: workflow GitHub Pages thay __BUILD__ bằng mã commit khi deploy (dùng để chống cache)
+window.CARTUBE_BUILD = "__BUILD__";
+
 window.CARTUBE_SCOPES = "https://www.googleapis.com/auth/youtube.readonly";
