@@ -14,7 +14,12 @@ if ! command -v docker >/dev/null 2>&1; then
   echo ">> Cài Docker..."
   curl -fsSL https://get.docker.com | sh
 fi
-if ! docker compose version >/dev/null 2>&1; then
+# Không có quyền vào docker.sock (chưa thuộc nhóm docker) -> dùng sudo
+DOCKER="docker"
+if ! docker info >/dev/null 2>&1; then
+  if sudo -n true 2>/dev/null || sudo -v; then DOCKER="sudo docker"; echo ">> Dùng sudo cho Docker (thêm quyền lâu dài: sudo usermod -aG docker \$USER rồi đăng nhập lại)"; fi
+fi
+if ! $DOCKER compose version >/dev/null 2>&1; then
   echo "!! Cần Docker Compose v2 (lệnh 'docker compose'). Cài theo https://docs.docker.com/compose/install/linux/"; exit 1
 fi
 
@@ -40,15 +45,15 @@ fi
 
 # 4) Chạy
 echo ">> Khởi động..."
-docker compose pull
-docker compose up -d
+$DOCKER compose pull
+$DOCKER compose up -d
 echo
 echo ">> Đang chờ Invidious sẵn sàng (có thể mất 1-2 phút lần đầu)..."
 for i in $(seq 1 60); do
-  if docker compose exec -T invidious wget -qO- http://127.0.0.1:3000/api/v1/stats >/dev/null 2>&1; then echo "   OK"; break; fi
+  if $DOCKER compose exec -T invidious wget -qO- http://127.0.0.1:3000/api/v1/stats >/dev/null 2>&1; then echo "   OK"; break; fi
   sleep 3
 done
 echo
 echo "==> Kiểm tra từ máy khác:  https://$DOMAIN/api/v1/stats"
 echo "==> Trong app: Cài đặt -> Trình phát: Stream -> Máy chủ: https://$DOMAIN"
-echo "    Cập nhật sau này:  cd $(pwd) && docker compose pull && docker compose up -d"
+echo "    Cập nhật sau này:  cd $(pwd) && $DOCKER compose pull && $DOCKER compose up -d"
