@@ -27,6 +27,8 @@ window.CARTUBE_DEFAULTS = {
   // Chất lượng ưu tiên: auto | hd1440 | hd1080 | hd720 | large(480p) | medium(360p)
   quality: "auto",
 
+  // Embed: true = chờ người dùng bấm play của YouTube cho từng video (được ghi lịch sử xem), false = tự phát (không ghi)
+  embedHistory: true,
   // Nguồn phát: stream (máy chủ riêng, không quảng cáo) | embed (YouTube IFrame, phiên đăng nhập theo cookie trình duyệt)
   playerSource: "stream",
   // Máy chủ stream (Invidious tự host, xem server/README.md). Cố định, không đổi trong app.

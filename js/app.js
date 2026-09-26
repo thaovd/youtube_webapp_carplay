@@ -236,6 +236,7 @@
     view.replaceChildren(el("div", { class: "settings" }, [
       field("Tài khoản", account),
       field("Nguồn phát", seg("playerSource", [["stream", "Máy chủ riêng"], ["embed", "YouTube embed"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
+      ...(s.playerSource === "embed" ? [field("Embed: bắt đầu phát", seg("embedHistory", [[true, "Bấm play của YouTube (ghi lịch sử)"], [false, "Tự phát (không ghi lịch sử)"]]))] : []),
       field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
       field("Tự phát video tiếp theo", seg("autoplayNext", [[true, "Bật"], [false, "Tắt"]])),
       field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]])),

@@ -112,7 +112,10 @@ window.Player = (function () {
   /* Màn che của app khi tạm dừng / kết thúc / chưa phát */
   function setCover(state) {
     const ended = state === S.ENDED;
-    const show = state === S.PAUSED || ended || state === S.CUED || state === S.UNSTARTED;
+    // Embed chờ người dùng bấm play của YouTube: nhường chỗ (không màn che, không lớp bắt cử chỉ) tới khi phát
+    const waiting = !!(yt?.isEmbed && yt.waitUser && (state === S.UNSTARTED || state === S.CUED));
+    ui.root.classList.toggle("embed-wait", waiting);
+    const show = !waiting && (state === S.PAUSED || ended || state === S.CUED || state === S.UNSTARTED);
     ui.cover.hidden = !show;
     ui.coverActions.hidden = !ended;
     ui.cover.querySelector(".cover-play").toggleAttribute("hidden", ended);
@@ -174,7 +177,7 @@ window.Player = (function () {
     ui.title.textContent = v.title; ui.channel.textContent = v.channel;
     ui.miniTitle.textContent = v.title; ui.miniChannel.textContent = v.channel; ui.miniThumb.src = v.thumb;
     ui.coverImg.src = v.thumb;
-    ui.cover.hidden = false; ui.coverActions.hidden = true; ui.cover.querySelector(".cover-play").toggleAttribute("hidden", true); ui.root.classList.remove("ended");
+    ui.cover.hidden = !!(yt?.isEmbed && yt.waitUser); ui.coverActions.hidden = true; ui.cover.querySelector(".cover-play").toggleAttribute("hidden", true); ui.root.classList.remove("ended");
     ui.mini.hidden = false;
     index = i;
     renderQueue();

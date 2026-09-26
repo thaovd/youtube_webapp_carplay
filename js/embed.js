@@ -24,7 +24,7 @@ window.Embed = (function () {
       this.isEmbed = true;
       this.holderId = holderId;
       this.ev = opts.events || {};
-      this.state = -1; this.yt = null; this.ready = false; this.pending = null; this.gen = 0;
+      this.state = -1; this.yt = null; this.ready = false; this.pending = null; this.gen = 0; this.waitUser = true;
       ensureApi().then(ok => {
         if (!ok) { toast("Không tải được YouTube IFrame API"); this.ev.onError?.({ data: 5, message: "iframe_api" }); return; }
         this.ready = true; Util.log("embed api ready");
@@ -44,15 +44,18 @@ window.Embed = (function () {
         const stage = document.getElementById("player-stage");
         const d = document.createElement("div"); d.id = this.holderId; stage.insertBefore(d, stage.firstChild);
       }
+      // Ghi lịch sử xem: YouTube chỉ ghi khi người dùng tự bấm play trong trình phát cho TỪNG video (đã kiểm chứng),
+      // nên mặc định không autoplay và không gọi playVideo() lúc nạp; người dùng bấm nút play đỏ của YouTube.
+      this.waitUser = s.embedHistory !== false;
       this.state = -1; this.ev.onStateChange?.({ data: -1 });
       this.yt = new YT.Player(this.holderId, {
         width: "100%", height: "100%", videoId: id,
         playerVars: {
-          autoplay: 1, controls: 0, rel: 0, playsinline: 1, iv_load_policy: 3, fs: 0, disablekb: 1,
+          autoplay: this.waitUser ? 0 : 1, controls: 0, rel: 0, playsinline: 1, iv_load_policy: 3, fs: 0, disablekb: 1,
           origin: location.origin, hl: s.lang, cc_lang_pref: s.captionLang, cc_load_policy: s.captions ? 1 : 0
         },
         events: {
-          onReady: (e) => { if (gen !== this.gen) return; Util.log("embed player ready", id); try { e.target.playVideo(); } catch (_) {} },
+          onReady: (e) => { if (gen !== this.gen) return; Util.log("embed player ready", id, this.waitUser ? "(chờ người dùng bấm play)" : "(tự phát)"); if (!this.waitUser) { try { e.target.playVideo(); } catch (_) {} } },
           onStateChange: (e) => { if (gen !== this.gen) return; this.state = e.data; this.ev.onStateChange?.({ data: e.data }); },
           onError: (e) => { if (gen !== this.gen) return; Util.log("embed error", e.data); this.ev.onError?.({ data: e.data, message: { 2: "tham số sai", 5: "lỗi HTML5", 100: "video không tồn tại/riêng tư", 101: "chủ sở hữu không cho nhúng", 150: "chủ sở hữu không cho nhúng" }[e.data] || String(e.data) }); }
         }

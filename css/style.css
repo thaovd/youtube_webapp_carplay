@@ -254,6 +254,8 @@ audio#yt-audio { display: none; }
 .cover-play { font-size: clamp(64px, 16vmin, 150px); color: var(--fg); filter: drop-shadow(0 4px 16px rgba(0,0,0,.7)); }
 .cover-actions { display: flex; gap: var(--gap); flex-wrap: wrap; justify-content: center; pointer-events: auto; }
 #player.ended #gesture-layer { pointer-events: none; }
+/* Embed đang chờ người dùng bấm nút play của YouTube: không che, không chặn chạm */
+#player.embed-wait #gesture-layer, #player.embed-wait #pause-cover { pointer-events: none; display: none; }
 #player.ended #pause-cover { pointer-events: auto; }
 
 /* Hiệu ứng tua nhanh khi chạm 2 lần bên trái / phải video */
