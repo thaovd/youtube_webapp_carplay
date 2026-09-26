@@ -135,12 +135,22 @@ window.Player = (function () {
     if (buffering) lastStall = Date.now();
     if (playing && !wasPlaying) lastPlayStart = Date.now();
     wasPlaying = playing || buffering;
-    if (playing) { ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); if (!prefsApplied) { prefsApplied = true; setTimeout(applyPrefs, 600); } } else stopTicker();
+    if (playing) { retryCount = 0; ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); if (!prefsApplied) { prefsApplied = true; setTimeout(applyPrefs, 600); } } else stopTicker();
     if (e.data === S.ENDED) { if (Util.loadSettings().autoplayNext) next(); }
   }
+  let retryCount = 0, retryTimer = null;
   function onError(e) {
     Util.log("player error", e?.data, e?.message || "");
     const v = queue[index];
+    // Nguồn Stream: link luồng có thể vừa hết hạn hoặc IP nhà vừa đổi (link ký theo IP) -> nạp lại video tối đa 2 lần
+    if (!yt?.isEmbed && v && retryCount < 2) {
+      retryCount++;
+      const at = yt?.getCurrentTime?.() || 0;
+      toast("Luồng bị ngắt, đang thử lại (" + retryCount + "/2)…", 3000);
+      clearTimeout(retryTimer);
+      retryTimer = setTimeout(() => { if (queue[index] === v) { yt.loadVideoById(v.id); if (at > 5) setTimeout(() => yt.seekTo(at), 1500); } }, 4000);
+      return;
+    }
     ui.err.hidden = false;
     ui.err.querySelector("p").textContent = (yt?.isEmbed ? "Không phát được video này" : "Máy chủ stream không phát được video này") + (e?.message ? ": " + e.message : "");
     ui.errLink.href = v ? "https://www.youtube.com/watch?v=" + v.id : "https://www.youtube.com";
@@ -182,7 +192,7 @@ window.Player = (function () {
     index = i;
     renderQueue();
     if (!yt) { pendingLoad = i; return; }
-    prefsApplied = false;
+    prefsApplied = false; retryCount = 0; clearTimeout(retryTimer);
     yt.loadVideoById(v.id);
     if ("mediaSession" in navigator) navigator.mediaSession.metadata = new MediaMetadata({ title: v.title, artist: v.channel, artwork: [{ src: v.thumb }] });
     document.dispatchEvent(new CustomEvent("player:track", { detail: v }));
