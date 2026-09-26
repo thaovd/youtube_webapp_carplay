@@ -92,7 +92,7 @@
       chips.replaceChildren(...cats.map(c => el("button", { class: "chip" + (c.id === trendingCat ? " active" : ""), type: "button", text: c.title, onclick: () => { trendingCat = c.id; renderHome(); } })));
       chips.hidden = false;
 
-      const useInv = Stream.active() && !Auth.getToken();
+      const useInv = Stream.active();   // có máy chủ stream: xu hướng/tìm kiếm luôn qua đó, không tốn quota Google
       const demo = !useInv && Demo.active();
       let page = useInv ? await Stream.trending({ categoryId: trendingCat }) : demo ? Demo.trending() : await Api.trending({ categoryId: trendingCat });
       const items = page.items;
@@ -161,7 +161,7 @@
       searchQuery = q; input.value = q; pushHistory(q);
       results.replaceChildren(el("div", { class: "state" }, [el("div", { class: "spinner" })]));
       try {
-        const useInv = Stream.active() && !Auth.getToken();
+        const useInv = Stream.active();   // có máy chủ stream: xu hướng/tìm kiếm luôn qua đó, không tốn quota Google
         const demo = !useInv && Demo.active();
         let page = useInv ? await Stream.search(q) : demo ? Demo.search(q) : await Api.search(q);
         const items = page.items;
