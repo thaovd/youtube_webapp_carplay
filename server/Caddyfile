@@ -1,8 +1,12 @@
-# HTTPS tự động (Let's Encrypt) cho {$DOMAIN}; cần cổng 80 và 443 mở từ Internet.
-{$DOMAIN} {
+# HTTP nội bộ, nhận từ reverse proxy ngoài (nginx) đã có TLS. Không tự cấp chứng chỉ.
+{
+	auto_https off
+}
+
+:8090 {
 	encode gzip
 
-	# Chỉ cho phép app của bạn dùng máy chủ (theo Referer/Origin). Đặt ALLOWED_REFERER=* để mở cho mọi nguồn.
+	# Chỉ cho phép app của bạn dùng máy chủ (theo Referer/Origin). Đặt ALLOWED_REFERER=.* để mở cho mọi nguồn.
 	@blocked {
 		not header_regexp Origin ^{$ALLOWED_REFERER}
 		not header_regexp Referer ^{$ALLOWED_REFERER}

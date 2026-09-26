@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Cài đặt máy chủ stream cho CarTube (Invidious + companion + Caddy) bằng một lệnh.
 # Dùng:  DOMAIN=ddns.vuthao.id.vn ./install.sh
+#        (tuỳ chọn) STREAM_PORT=8090   -- cổng HTTP nội bộ để nginx proxy về (mặc định 8090)
 #        (tuỳ chọn) ALLOWED_REFERER='https://thaovd\.github\.io/'   -- regex, mặc định như vậy; đặt '.*' để mở
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -8,6 +9,7 @@ cd "$(dirname "$0")"
 DOMAIN="${DOMAIN:-}"
 if [ -z "$DOMAIN" ]; then read -rp "Tên miền trỏ về máy này (ví dụ ddns.vuthao.id.vn): " DOMAIN; fi
 ALLOWED_REFERER="${ALLOWED_REFERER:-https://thaovd\\.github\\.io/}"
+STREAM_PORT="${STREAM_PORT:-8090}"
 
 # 1) Docker
 if ! command -v docker >/dev/null 2>&1; then
@@ -35,12 +37,14 @@ if [ ! -f .env ]; then
   cat > .env <<ENV
 DOMAIN=$DOMAIN
 ALLOWED_REFERER=$ALLOWED_REFERER
+STREAM_PORT=$STREAM_PORT
 HMAC_KEY=$(gen 32)
 COMPANION_KEY=$(gen 16)
 ENV
   echo ">> Đã tạo .env"
 else
   sed -i "s|^DOMAIN=.*|DOMAIN=$DOMAIN|; s|^ALLOWED_REFERER=.*|ALLOWED_REFERER=$ALLOWED_REFERER|" .env
+  grep -q '^STREAM_PORT=' .env && sed -i "s|^STREAM_PORT=.*|STREAM_PORT=$STREAM_PORT|" .env || echo "STREAM_PORT=$STREAM_PORT" >> .env
 fi
 
 # 4) Chạy
@@ -54,6 +58,8 @@ for i in $(seq 1 60); do
   sleep 3
 done
 echo
+echo "==> Nội bộ:  curl http://127.0.0.1:$STREAM_PORT/api/v1/stats"
+echo "==> Cấu hình nginx proxy https://$DOMAIN -> http://127.0.0.1:$STREAM_PORT (mẫu: nginx.example.conf)"
 echo "==> Kiểm tra từ máy khác:  https://$DOMAIN/api/v1/stats"
 echo "==> Trong app: Cài đặt -> Trình phát: Stream -> Máy chủ: https://$DOMAIN"
 echo "    Cập nhật sau này:  cd $(pwd) && $DOCKER compose pull && $DOCKER compose up -d"
