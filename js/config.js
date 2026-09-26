@@ -44,6 +44,9 @@ window.CARTUBE_DEFAULTS = {
 
   // Địa chỉ máy chủ stream (https://...), dùng cho chế độ stream
   streamServer: "",
+  // Nhận lệnh play/pause từ hệ thống (nút vô lăng, Now Playing, tai nghe): "auto" = tắt trên iOS ở chế độ stream
+  // vì iOS/CarPlay hay gửi lệnh pause giả khi phiên âm thanh bị ngắt quãng; true/false = ép bật/tắt
+  mediaKeys: "auto",
   // Chế độ stream: dùng DASH (720p/1080p, cần MediaSource) hay chỉ mp4 progressive (360p, ổn định nhất)
   streamDash: true,
 

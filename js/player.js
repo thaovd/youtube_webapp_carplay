@@ -98,8 +98,17 @@ window.Player = (function () {
     });
     if ("mediaSession" in navigator) {
       const ms = navigator.mediaSession;
-      ms.setActionHandler("play", () => { Util.log("mediaSession play"); yt?.playVideo(); if (dual) ya?.playVideo?.(); });
-      ms.setActionHandler("pause", () => { Util.log("mediaSession pause"); yt?.pauseVideo(); if (dual) ya?.pauseVideo?.(); });
+      const mk = Util.loadSettings().mediaKeys;
+      const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const acceptPlayPause = mk === true || (mk !== false && !(isIOS && Util.loadSettings().playerMode === "stream"));
+      if (acceptPlayPause) {
+        ms.setActionHandler("play", () => { Util.log("mediaSession play"); yt?.playVideo(); if (dual) ya?.playVideo?.(); });
+        ms.setActionHandler("pause", () => { Util.log("mediaSession pause"); yt?.pauseVideo(); if (dual) ya?.pauseVideo?.(); });
+      } else {
+        // Ghi đè xử lý mặc định để hệ thống không tự dừng video (iOS/CarPlay gửi pause giả)
+        ms.setActionHandler("play", () => Util.log("mediaSession play (bỏ qua)"));
+        ms.setActionHandler("pause", () => Util.log("mediaSession pause (bỏ qua)"));
+      }
       ms.setActionHandler("nexttrack", next);
       ms.setActionHandler("previoustrack", prev);
       ms.setActionHandler("seekbackward", () => seekBy(-10));
