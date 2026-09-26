@@ -1,13 +1,13 @@
 # CarTube stream server: Invidious (+ companion) + Caddy nội bộ (CORS, lọc Referer), nghe HTTP ở cổng STREAM_PORT
 # Cài bằng ./install.sh  (xem README.md trong thư mục này)
 services:
-  # Caddy ở đây chỉ chạy HTTP nội bộ (CORS + lọc Referer). TLS do nginx/Caddy ngoài của bạn đảm nhiệm,
-  # proxy về 127.0.0.1:${STREAM_PORT} (xem nginx.example.conf)
+  # Caddy ở đây chỉ chạy HTTP (CORS + lọc Referer). TLS do reverse proxy ngoài (nginx / Nginx Proxy Manager) đảm nhiệm.
+  # STREAM_BIND=127.0.0.1 nếu proxy cùng máy; 0.0.0.0 nếu proxy ở máy khác (nhớ mở cổng trên router/firewall)
   caddy:
     image: caddy:2
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${STREAM_PORT:-8090}:8090"
+      - "${STREAM_BIND:-127.0.0.1}:${STREAM_PORT:-8090}:8090"
     environment:
       ALLOWED_REFERER: ${ALLOWED_REFERER}
     volumes:

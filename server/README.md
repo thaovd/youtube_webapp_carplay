@@ -22,6 +22,26 @@ Rồi thêm server block nginx theo `nginx.example.conf` (đổi tên miền, đ
 Kiểm tra: `curl http://127.0.0.1:8090/api/v1/stats` trên máy, rồi mở `https://<tên miền>/api/v1/stats` từ điện thoại thấy JSON là xong.
 Trong app: **Cài đặt → Trình phát → Stream (máy chủ riêng)** → nhập `https://<tên miền>` → Lưu.
 
+## Dùng Nginx Proxy Manager ở máy khác (VPS)
+
+1. Trên máy stream: `STREAM_BIND=0.0.0.0 DOMAIN=<tên miền app> ./install.sh`, mở cổng 8090 trên firewall
+   (`sudo ufw allow 8090/tcp`) và port-forward 8090 trên router về máy này.
+2. DNS: tên miền app (ví dụ `yt.vuthao.id.vn`) trỏ về IP của VPS chạy NPM.
+3. NPM → Proxy Hosts → Add:
+   - Domain: `yt.vuthao.id.vn`; Scheme `http`; Forward Host: tên DDNS/IP của máy stream; Port `8090`.
+   - Bật Websockets Support; **tắt** Block Common Exploits và Cache Assets (dễ chặn nhầm URL luồng video).
+   - SSL: Request a new certificate (Let's Encrypt), Force SSL, HTTP/2.
+   - Advanced → Custom Nginx Configuration:
+     ```
+     proxy_buffering off;
+     proxy_request_buffering off;
+     proxy_read_timeout 300s;
+     client_max_body_size 0;
+     proxy_set_header Range $http_range;
+     proxy_set_header If-Range $http_if_range;
+     ```
+4. Kiểm tra `https://yt.vuthao.id.vn/api/v1/stats`, rồi nhập địa chỉ này vào app.
+
 ## Bảo vệ
 Caddy chỉ nhận yêu cầu có `Origin`/`Referer` khớp `ALLOWED_REFERER` trong `.env`
 (mặc định `https://thaovd\.github\.io/`). Đổi tên miền app thì sửa giá trị này rồi `docker compose up -d`.
