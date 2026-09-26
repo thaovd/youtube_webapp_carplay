@@ -27,6 +27,8 @@ window.CARTUBE_DEFAULTS = {
   // Chất lượng ưu tiên: auto | hd1440 | hd1080 | hd720 | large(480p) | medium(360p)
   quality: "auto",
 
+  // Nguồn phát: stream (máy chủ riêng, không quảng cáo) | embed (YouTube IFrame, phiên đăng nhập theo cookie trình duyệt)
+  playerSource: "stream",
   // Máy chủ stream (Invidious tự host, xem server/README.md). Cố định, không đổi trong app.
   streamServer: "https://api-ytdlp.vuth.vn",
   // Nhận lệnh play/pause từ hệ thống (nút vô lăng, Now Playing, tai nghe): true | false

@@ -92,9 +92,15 @@ window.Player = (function () {
       ms.setActionHandler("seekforward", () => seekBy(10));
     }
 
-    // Tạo trình phát
-    yt = new Stream.HtmlPlayer("yt-player", { events: { onReady, onStateChange, onError } });
-    ui.root.classList.add("stream");
+    // Tạo trình phát theo nguồn phát đã chọn
+    if (Util.loadSettings().playerSource === "embed") {
+      yt = new Embed.EmbedPlayer("yt-player", { events: { onReady, onStateChange, onError } });
+      ui.root.classList.add("embed");
+      Util.log("player: embed");
+    } else {
+      yt = new Stream.HtmlPlayer("yt-player", { events: { onReady, onStateChange, onError } });
+      ui.root.classList.add("stream");
+    }
   }
 
   function seekTarget() { return (ui.seek.value / 1000) * (yt?.getDuration?.() || 0); }
@@ -133,9 +139,9 @@ window.Player = (function () {
     Util.log("player error", e?.data, e?.message || "");
     const v = queue[index];
     ui.err.hidden = false;
-    ui.err.querySelector("p").textContent = "Máy chủ stream không phát được video này" + (e?.message ? ": " + e.message : "");
+    ui.err.querySelector("p").textContent = (yt?.isEmbed ? "Không phát được video này" : "Máy chủ stream không phát được video này") + (e?.message ? ": " + e.message : "");
     ui.errLink.href = v ? "https://www.youtube.com/watch?v=" + v.id : "https://www.youtube.com";
-    if (Util.loadSettings().autoplayNext && e?.data === 100) {
+    if (Util.loadSettings().autoplayNext && [100, 101, 150].includes(e?.data)) {
       toast("Video không phát được, chuyển video tiếp theo…");
       setTimeout(() => { if (!ui.err.hidden) next(); }, 2500);
     }
@@ -222,7 +228,7 @@ window.Player = (function () {
     if (!yt) return;
     if (!silent) Util.saveSettings({ quality: q });
     yt.setPlaybackQuality(q === "auto" ? "default" : q);
-    if (!silent) toast("Chất lượng: " + (QUALITY_LABEL[q] || q));
+    if (!silent) toast(yt?.isEmbed ? "Đã yêu cầu " + (QUALITY_LABEL[q] || q) + " (YouTube có thể tự điều chỉnh)" : "Chất lượng: " + (QUALITY_LABEL[q] || q));
   }
 
   /* Bảng chọn dùng chung */
