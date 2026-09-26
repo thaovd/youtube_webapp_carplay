@@ -121,6 +121,7 @@ window.Stream = (function () {
         st(STATE.PAUSED);
       });
       v.addEventListener("waiting", () => st(STATE.BUFFERING));
+      v.addEventListener("stalled", () => { if (this.state === STATE.PLAYING) st(STATE.BUFFERING); });
       v.addEventListener("ended", () => { this.wantPlaying = false; st(STATE.ENDED); });
       v.addEventListener("error", () => { if (this.video.src || this.dash) { console.warn("video error", v.error); this.ev.onError?.({ data: 5, message: v.error?.message }); } });
       a.addEventListener("ended", () => { if (this.bg) { this.bg = false; this.wantPlaying = false; st(STATE.ENDED); } });
@@ -196,7 +197,8 @@ window.Stream = (function () {
     _playDash(url, pref) {
       const d = window.dashjs.MediaPlayer().create();
       this.dash = d;
-      try { d.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: pref === "auto", audio: true } }, buffer: { fastSwitchEnabled: true } } }); } catch (_) {}
+      // Bộ đệm lớn hơn mặc định để ít khựng khi mạng qua nhiều chặng (đệm trước 40-60 giây)
+      try { d.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: pref === "auto", audio: true } }, buffer: { fastSwitchEnabled: true, initialBufferLevel: 4, bufferTimeDefault: 40, bufferTimeAtTopQuality: 60, bufferTimeAtTopQualityLongForm: 60, stableBufferTime: 40, bufferToKeep: 20 } } }); } catch (_) {}
       d.on("error", (e) => { console.warn("dash error", e); Util.log("dash error", e?.error?.code || e?.error, e?.error?.message || ""); if (this.dash === d) { try { d.reset(); } catch (_) {} this.dash = null; dashReason = "lỗi DASH"; toast("DASH lỗi, chuyển sang mp4", 2500); this._playProgressive(pref); } });
       d.on("streamInitialized", () => {
         try { this.levels = DJ.levels(d).map(l => Object.assign(l, { q: qOfHeight(l.height) })); } catch (e) { console.warn(e); this.levels = []; }
