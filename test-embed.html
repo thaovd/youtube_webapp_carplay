@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thử embed thuần</title>
+<style>body{margin:0;background:#111;color:#eee;font:16px system-ui;padding:16px}iframe{width:100%;aspect-ratio:16/9;border:0;background:#000}p{color:#aaa}code{background:#333;padding:2px 6px;border-radius:4px}</style>
+</head>
+<body>
+<h3>1. Iframe thuần (không API, không tham số)</h3>
+<iframe src="https://www.youtube.com/embed/6PJyY1icsA4" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+<h3>2. Iframe với tham số giống app (enablejsapi + origin, controls=0)</h3>
+<iframe id="f2" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+<p>Trang: <code id="origin"></code>. Phát mỗi video ≥ 30 giây rồi kiểm tra lịch sử xem trên youtube.com trong cùng trình duyệt.</p>
+<script>
+  document.getElementById("origin").textContent = location.href;
+  document.getElementById("f2").src = "https://www.youtube.com/embed/6PJyY1icsA4?enablejsapi=1&origin=" + encodeURIComponent(location.origin) + "&controls=0&rel=0&playsinline=1&iv_load_policy=3&fs=0&disablekb=1";
+</script>
+</body>
+</html>
