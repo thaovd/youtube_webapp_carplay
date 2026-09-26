@@ -3,7 +3,7 @@
 # Dùng:  DOMAIN=ddns.vuthao.id.vn ./install.sh
 #        (tuỳ chọn) STREAM_PORT=8090   -- cổng HTTP để reverse proxy trỏ về (mặc định 8090)
 #        (tuỳ chọn) STREAM_BIND=0.0.0.0 -- proxy ở máy khác (Nginx Proxy Manager trên VPS); mặc định 127.0.0.1 (proxy cùng máy)
-#        (tuỳ chọn) ALLOWED_REFERER='https://thaovd\.github\.io/'   -- regex, mặc định như vậy; đặt '.*' để mở
+#        (tuỳ chọn) ALLOWED_REFERER='https://thaovd\.github\.io(/|$)'   -- regex khớp Origin/Referer; đặt '.*' để mở
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -46,9 +46,12 @@ COMPANION_KEY=$(gen 16)
 ENV
   echo ">> Đã tạo .env"
 else
-  sed -i "s|^DOMAIN=.*|DOMAIN=$DOMAIN|; s|^ALLOWED_REFERER=.*|ALLOWED_REFERER=$ALLOWED_REFERER|" .env
-  grep -q '^STREAM_PORT=' .env && sed -i "s|^STREAM_PORT=.*|STREAM_PORT=$STREAM_PORT|" .env || echo "STREAM_PORT=$STREAM_PORT" >> .env
-  grep -q '^STREAM_BIND=' .env && sed -i "s|^STREAM_BIND=.*|STREAM_BIND=$STREAM_BIND|" .env || echo "STREAM_BIND=$STREAM_BIND" >> .env
+  # Cập nhật từng biến (không dùng sed vì giá trị có thể chứa | / $)
+  setvar() { grep -v "^$1=" .env > .env.tmp || true; echo "$1=$2" >> .env.tmp; mv .env.tmp .env; }
+  setvar DOMAIN "$DOMAIN"
+  setvar ALLOWED_REFERER "$ALLOWED_REFERER"
+  setvar STREAM_PORT "$STREAM_PORT"
+  setvar STREAM_BIND "$STREAM_BIND"
 fi
 
 # 4) Chạy
