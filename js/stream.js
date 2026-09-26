@@ -13,7 +13,16 @@ window.Stream = (function () {
 
   function server() { return (Util.loadSettings().streamServer || "").replace(/\/+$/, ""); }
   function active() { return Util.loadSettings().playerMode === "stream" && !!server(); }
-  function abs(u) { return /^https?:/i.test(u) ? u : server() + u; }
+  /* URL từ Invidious: tương đối -> ghép máy chủ; tuyệt đối nhưng trỏ tên miền khác (DOMAIN cấu hình lệch) -> đổi về máy chủ đã nhập */
+  function abs(u) {
+    if (!u) return u;
+    if (!/^https?:/i.test(u)) return server() + u;
+    try {
+      const x = new URL(u), sv = new URL(server());
+      if (x.host !== sv.host && /^\/(videoplayback|api\/|vi\/|ggpht|latest_version)/.test(x.pathname)) { x.protocol = sv.protocol; x.host = sv.host; return x.toString(); }
+    } catch (_) {}
+    return u;
+  }
 
   /* ---- Dữ liệu từ Invidious (dùng cho xu hướng / tìm kiếm khi không đăng nhập Google) ---- */
   function norm(v) {
