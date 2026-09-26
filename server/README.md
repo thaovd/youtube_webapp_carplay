@@ -47,6 +47,12 @@ Caddy chỉ nhận yêu cầu có `Origin`/`Referer` khớp `ALLOWED_REFERER` tr
 (mặc định `https://thaovd\.github\.io(/|$)`). Đổi tên miền app thì sửa giá trị này rồi `docker compose up -d`.
 Đặt `ALLOWED_REFERER=.*` nếu muốn mở cho mọi nguồn (không khuyến nghị).
 
+## Tự cập nhật
+
+Container `watchtower` trong compose kiểm tra image mới mỗi đêm 04:00 (giờ Việt Nam) cho invidious, companion và
+caddy, tự kéo về, khởi động lại và dọn image cũ. Postgres không tự cập nhật. Kiểm tra: `docker compose logs watchtower`.
+Muốn cập nhật ngay: `docker compose pull && docker compose up -d`.
+
 ## Vận hành
 ```bash
 docker compose ps                 # trạng thái
