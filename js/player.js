@@ -93,7 +93,7 @@ window.Player = (function () {
     }
 
     // Tạo trình phát theo nguồn phát đã chọn
-    if (Util.loadSettings().playerSource === "embed") {
+    if (Util.playerSource() === "embed") {
       yt = new Embed.EmbedPlayer("yt-player", { events: { onReady, onStateChange, onError } });
       ui.root.classList.add("embed");
       Util.log("player: embed");

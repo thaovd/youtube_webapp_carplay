@@ -85,7 +85,11 @@ window.Util = (function () {
   window.addEventListener("pagehide", () => log("pagehide")); window.addEventListener("pageshow", (e) => log("pageshow persisted=" + e.persisted));
   window.addEventListener("resize", () => log("resize", innerWidth + "x" + innerHeight));
 
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  /* Nguồn phát hiệu lực: "auto" -> stream trên iOS, embed nơi khác */
+  function playerSource() { const v = loadSettings().playerSource; return v === "auto" || !v ? (isIOS ? "stream" : "embed") : v; }
+
   function decodeHtml(s) { const t = document.createElement("textarea"); t.innerHTML = s || ""; return t.value; }
 
-  return { $, $$, el, loadSettings, saveSettings, parseDuration, fmtTime, fmtCount, fmtAgo, bestThumb, toast, decodeHtml, log, getLog };
+  return { $, $$, el, loadSettings, saveSettings, parseDuration, fmtTime, fmtCount, fmtAgo, bestThumb, toast, decodeHtml, log, getLog, playerSource, isIOS };
 })();

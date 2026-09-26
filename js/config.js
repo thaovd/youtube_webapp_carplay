@@ -29,8 +29,9 @@ window.CARTUBE_DEFAULTS = {
 
   // Embed: true = chờ người dùng bấm play của YouTube cho từng video (được ghi lịch sử xem), false = tự phát (không ghi)
   embedHistory: true,
-  // Nguồn phát: stream (máy chủ riêng, không quảng cáo) | embed (YouTube IFrame, phiên đăng nhập theo cookie trình duyệt)
-  playerSource: "stream",
+  // Nguồn phát: auto (iOS/iPadOS -> stream vì WebKit chặn cookie bên thứ ba; nơi khác -> embed để dùng Premium/lịch sử)
+  //             | stream (máy chủ riêng, không quảng cáo) | embed (YouTube IFrame, phiên đăng nhập theo cookie trình duyệt)
+  playerSource: "auto",
   // Máy chủ stream (Invidious tự host, xem server/README.md). Cố định, không đổi trong app.
   streamServer: "https://api-ytdlp.vuth.vn",
   // Nhận lệnh play/pause từ hệ thống (nút vô lăng, Now Playing, tai nghe): true | false
