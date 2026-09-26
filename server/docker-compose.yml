@@ -13,6 +13,7 @@ services:
       ALLOWED_REFERER: ${ALLOWED_REFERER}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ..:/app:ro                     # mã nguồn app (thư mục repo) -> phục vụ tại /yt/
       - caddydata:/data
       - caddyconfig:/config
     depends_on:

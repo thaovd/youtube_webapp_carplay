@@ -42,6 +42,27 @@ Trong app: **Cài đặt → Trình phát → Stream (máy chủ riêng)** → n
      ```
 4. Kiểm tra `https://yt.vuthao.id.vn/api/v1/stats`, rồi nhập địa chỉ này vào app.
 
+## Phục vụ app tại https://vuth.vn/yt/
+
+Caddy trong cụm phục vụ luôn mã nguồn app (thư mục repo mount vào container) tại đường `/yt/`.
+Cập nhật app trên laptop chỉ cần `git pull` trong thư mục repo.
+
+1. Trên laptop: `git pull` rồi `sudo docker compose up -d` (Caddy nhận cấu hình mới). Kiểm tra `curl -I http://127.0.0.1:8090/yt/`.
+2. NPM: Proxy Host `vuth.vn` (tạo mới hoặc mở host sẵn có) → tab **Custom locations** → Add:
+   - location: `/yt/` ; Scheme `http` ; Forward Host: `ddns.vuthao.id.vn` ; Port `8090`
+   - (bánh răng của location) Custom config:
+     ```
+     proxy_set_header X-Forwarded-Proto https;
+     ```
+   Với host này cũng bật SSL (Let's Encrypt), Force SSL.
+3. Google Cloud Console → OAuth client: thêm **Authorized JavaScript origins** `https://vuth.vn`
+   và **Authorized redirect URIs** `https://vuth.vn/yt/` (để đăng nhập Google hoạt động ở tên miền mới).
+4. Mở `https://vuth.vn/yt/`. Bộ lọc Referer của máy chủ đã chấp nhận `vuth.vn` (mặc định mới của `install.sh`;
+   nếu `.env` cũ, chạy lại `./install.sh` để cập nhật `ALLOWED_REFERER`).
+
+Lưu ý: bản phục vụ từ Caddy không có mã bản dựng (không tự kiểm tra cập nhật) nhưng Caddy gửi `Cache-Control: no-cache`
+nên trình duyệt luôn hỏi lại máy chủ, `git pull` xong là thấy bản mới.
+
 ## Bảo vệ
 Caddy chỉ nhận yêu cầu có `Origin`/`Referer` khớp `ALLOWED_REFERER` trong `.env`
 (mặc định `https://thaovd\.github\.io(/|$)`). Đổi tên miền app thì sửa giá trị này rồi `docker compose up -d`.

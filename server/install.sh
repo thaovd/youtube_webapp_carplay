@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 
 DOMAIN="${DOMAIN:-}"
 if [ -z "$DOMAIN" ]; then read -rp "Tên miền trỏ về máy này (ví dụ ddns.vuthao.id.vn): " DOMAIN; fi
-ALLOWED_REFERER="${ALLOWED_REFERER:-https://thaovd\\.github\\.io(/|\$)}"
+ALLOWED_REFERER="${ALLOWED_REFERER:-https://(thaovd\\.github\\.io|vuth\\.vn)(/|\$)}"
 STREAM_PORT="${STREAM_PORT:-8090}"
 STREAM_BIND="${STREAM_BIND:-127.0.0.1}"
 
@@ -68,5 +68,6 @@ echo
 echo "==> Nội bộ:  curl http://127.0.0.1:$STREAM_PORT/api/v1/stats"
 echo "==> Reverse proxy: https://$DOMAIN -> http://<máy này>:$STREAM_PORT (nginx: nginx.example.conf; NPM: xem README)"
 echo "==> Kiểm tra từ máy khác:  https://$DOMAIN/api/v1/stats"
+echo "==> App cũng được phục vụ tại http://<máy này>:$STREAM_PORT/yt/  (proxy ra https://vuth.vn/yt/ bằng NPM, xem README)"
 echo "==> Trong app: Cài đặt -> Trình phát: Stream -> Máy chủ: https://$DOMAIN"
 echo "    Cập nhật sau này:  cd $(pwd) && $DOCKER compose pull && $DOCKER compose up -d"

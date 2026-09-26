@@ -6,6 +6,16 @@
 :8090 {
 	encode gzip
 
+	# ---- App CarTube phục vụ tại /yt/ (mã nguồn repo mount vào /app, cập nhật bằng git pull) ----
+	handle_path /yt/* {
+		root * /app
+		header Cache-Control "no-cache"
+		file_server
+	}
+	redir /yt /yt/ 301
+
+	# ---- API Invidious ----
+
 	# CORS cho API JSON, manifest DASH, phụ đề và luồng video (dash.js tải bằng fetch, có header Range -> preflight OPTIONS)
 	header {
 		Access-Control-Allow-Origin "*"
