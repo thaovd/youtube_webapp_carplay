@@ -9,7 +9,7 @@ cd "$(dirname "$0")"
 
 DOMAIN="${DOMAIN:-}"
 if [ -z "$DOMAIN" ]; then read -rp "Tên miền trỏ về máy này (ví dụ ddns.vuthao.id.vn): " DOMAIN; fi
-ALLOWED_REFERER="${ALLOWED_REFERER:-https://thaovd\\.github\\.io/}"
+ALLOWED_REFERER="${ALLOWED_REFERER:-https://thaovd\\.github\\.io(/|\$)}"
 STREAM_PORT="${STREAM_PORT:-8090}"
 STREAM_BIND="${STREAM_BIND:-127.0.0.1}"
 

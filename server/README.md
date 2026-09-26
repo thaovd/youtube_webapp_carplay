@@ -44,7 +44,7 @@ Trong app: **Cài đặt → Trình phát → Stream (máy chủ riêng)** → n
 
 ## Bảo vệ
 Caddy chỉ nhận yêu cầu có `Origin`/`Referer` khớp `ALLOWED_REFERER` trong `.env`
-(mặc định `https://thaovd\.github\.io/`). Đổi tên miền app thì sửa giá trị này rồi `docker compose up -d`.
+(mặc định `https://thaovd\.github\.io(/|$)`). Đổi tên miền app thì sửa giá trị này rồi `docker compose up -d`.
 Đặt `ALLOWED_REFERER=.*` nếu muốn mở cho mọi nguồn (không khuyến nghị).
 
 ## Vận hành
