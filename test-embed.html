@@ -2,18 +2,42 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thử embed thuần</title>
-<style>body{margin:0;background:#111;color:#eee;font:16px system-ui;padding:16px}iframe{width:100%;aspect-ratio:16/9;border:0;background:#000}p{color:#aaa}code{background:#333;padding:2px 6px;border-radius:4px}</style>
+<title>Thử embed</title>
+<style>
+body{margin:0;background:#111;color:#eee;font:16px system-ui;padding:16px;max-width:900px}
+.box{position:relative;width:100%;aspect-ratio:16/9;background:#000;margin-bottom:8px}
+.box iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.overlay{position:absolute;inset:0;z-index:2;background:transparent}
+p{color:#aaa}code{background:#333;padding:2px 6px;border-radius:4px}button{font-size:18px;padding:10px 18px;margin:8px 0}
+</style>
 </head>
 <body>
-<h3>1. Iframe thuần (không API, không tham số)</h3>
-<iframe src="https://www.youtube.com/embed/6PJyY1icsA4" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-<h3>2. Iframe với tham số giống app (enablejsapi + origin, controls=0)</h3>
-<iframe id="f2" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-<p>Trang: <code id="origin"></code>. Phát mỗi video ≥ 30 giây rồi kiểm tra lịch sử xem trên youtube.com trong cùng trình duyệt.</p>
+<p>Mỗi phần phát ≥ 30 giây (một video khác nhau cho mỗi phần) rồi kiểm tra lịch sử trên youtube.com. Trang: <code id="origin"></code></p>
+
+<h3>3. Mã video trong URL + autoplay, KHÔNG lớp phủ, phát bằng nút của trang</h3>
+<button id="b3">Phát mục 3</button>
+<div class="box"><iframe id="f3" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+
+<h3>4. Giống 3 nhưng CÓ lớp phủ trong suốt đè lên (như app)</h3>
+<button id="b4">Phát mục 4</button>
+<div class="box"><iframe id="f4" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe><div class="overlay"></div></div>
+
+<h3>5. Tạo bằng IFrame API + videoId + autoplay, không lớp phủ (đúng cách app đang tạo)</h3>
+<button id="b5">Phát mục 5</button>
+<div class="box"><div id="f5"></div></div>
+
 <script>
   document.getElementById("origin").textContent = location.href;
-  document.getElementById("f2").src = "https://www.youtube.com/embed/6PJyY1icsA4?enablejsapi=1&origin=" + encodeURIComponent(location.origin) + "&controls=0&rel=0&playsinline=1&iv_load_policy=3&fs=0&disablekb=1";
+  const P = "?autoplay=1&controls=0&rel=0&playsinline=1&iv_load_policy=3&fs=0&disablekb=1&enablejsapi=1&origin=" + encodeURIComponent(location.origin);
+  document.getElementById("b3").onclick = () => document.getElementById("f3").src = "https://www.youtube.com/embed/kJQP7kiw5Fk" + P;
+  document.getElementById("b4").onclick = () => document.getElementById("f4").src = "https://www.youtube.com/embed/JGwWNGJdvx8" + P;
+  document.getElementById("b5").onclick = () => {
+    const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api";
+    window.onYouTubeIframeAPIReady = () => new YT.Player("f5", { width: "100%", height: "100%", videoId: "RgKAFK5djSk",
+      playerVars: { autoplay: 1, controls: 0, rel: 0, playsinline: 1, iv_load_policy: 3, fs: 0, disablekb: 1, origin: location.origin },
+      events: { onReady: (e) => e.target.playVideo() } });
+    document.head.appendChild(s);
+  };
 </script>
 </body>
 </html>
