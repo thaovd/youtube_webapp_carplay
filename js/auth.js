@@ -15,14 +15,14 @@ window.Auth = (function () {
 
   function readToken() {
     try {
-      const t = JSON.parse(sessionStorage.getItem(TKEY) || "null");
+      const t = JSON.parse(localStorage.getItem(TKEY) || "null");
       if (t && t.access_token && t.expires_at > Date.now() + 30_000) return t;
     } catch (_) {}
     return null;
   }
   function writeToken(resp) {
     const t = { access_token: resp.access_token, expires_at: Date.now() + (+resp.expires_in || 3600) * 1000 };
-    sessionStorage.setItem(TKEY, JSON.stringify(t));
+    localStorage.setItem(TKEY, JSON.stringify(t));
     return t;
   }
 
@@ -68,7 +68,7 @@ window.Auth = (function () {
 
   function signOut() {
     const t = readToken();
-    sessionStorage.removeItem(TKEY);
+    localStorage.removeItem(TKEY);
     try { localStorage.removeItem("cartube.wasSignedIn"); } catch (_) {}
     profile = null;
     if (t && window.google?.accounts?.oauth2) google.accounts.oauth2.revoke(t.access_token, () => {});
@@ -90,16 +90,27 @@ window.Auth = (function () {
      Google chuyển về đúng URL của app kèm #access_token=... ; URL này phải nằm trong "Authorized redirect URIs" của Client ID. */
   const SKEY = "cartube.oauth_state";
   function redirectUri() { return location.origin + location.pathname; }
-  function redirectSignIn() {
+  function redirectSignIn(silent) {
     const { clientId } = Util.loadSettings();
     if (!clientId) return;
-    const state = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const state = (silent ? "silent-" : "") + Math.random().toString(36).slice(2) + Date.now().toString(36);
     try { sessionStorage.setItem(SKEY, state); } catch (_) {}
     const q = new URLSearchParams({
       client_id: clientId, redirect_uri: redirectUri(), response_type: "token", scope: window.CARTUBE_SCOPES,
-      include_granted_scopes: "true", state, prompt: "select_account"
+      include_granted_scopes: "true", state, prompt: silent ? "none" : "select_account"
     });
     location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + q.toString());
+  }
+  /* Làm mới token ngầm khi mở app: chuyển hướng tới Google với prompt=none (không giao diện) rồi quay lại ngay.
+     Chỉ thử một lần mỗi phiên trình duyệt, và chỉ với người đã từng đăng nhập. */
+  function silentRefresh() {
+    if (readToken()) return false;
+    let was = null, tried = null;
+    try { was = localStorage.getItem("cartube.wasSignedIn"); tried = sessionStorage.getItem("cartube.silentTried"); } catch (_) {}
+    if (was !== "1" || tried) return false;
+    try { sessionStorage.setItem("cartube.silentTried", "1"); } catch (_) {}
+    redirectSignIn(true);
+    return true;
   }
   /* Đọc token từ URL sau khi Google chuyển hướng về. Trả về: "ok" | "error:<mã>" | null (không phải lượt quay về) */
   function consumeRedirect() {
@@ -108,13 +119,18 @@ window.Auth = (function () {
     const p = new URLSearchParams(h.slice(1));
     let expected = null; try { expected = sessionStorage.getItem(SKEY); sessionStorage.removeItem(SKEY); } catch (_) {}
     history.replaceState(null, "", location.pathname + location.search);   // xoá token khỏi thanh địa chỉ / lịch sử
-    if (p.get("error")) return "error:" + p.get("error");
+    const silent = /^silent-/.test(p.get("state") || "");
+    if (p.get("error")) {
+      // Làm mới ngầm thất bại (hết phiên Google): quên trạng thái đã đăng nhập, không báo lỗi
+      if (silent) { try { localStorage.removeItem("cartube.wasSignedIn"); } catch (_) {} return null; }
+      return "error:" + p.get("error");
+    }
     if (!p.get("access_token") || (expected && p.get("state") !== expected)) return "error:state_mismatch";
     writeToken({ access_token: p.get("access_token"), expires_in: p.get("expires_in") });
     try { localStorage.setItem("cartube.wasSignedIn", "1"); } catch (_) {}
-    return "ok";
+    return silent ? "silent_ok" : "ok";
   }
   const redirectResult = consumeRedirect();
 
-  return { onGisLoaded, signIn, signOut, getToken, getState, onChange, reconfigure, redirectSignIn, redirectUri, redirectResult };
+  return { onGisLoaded, signIn, signOut, getToken, getState, onChange, reconfigure, redirectSignIn, redirectUri, redirectResult, silentRefresh };
 })();

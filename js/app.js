@@ -287,6 +287,7 @@
   }
   // Kết quả khi quay về từ trang đăng nhập Google (kiểu chuyển hướng)
   if (Auth.redirectResult === "ok") { toast("Đăng nhập thành công"); }
+  else if (Auth.redirectResult === "silent_ok") { Util.log("token làm mới ngầm OK"); }
   else if (Auth.redirectResult && Auth.redirectResult.startsWith("error:")) {
     const c = Auth.redirectResult.slice(6);
     toast(c === "access_denied" ? "Bạn đã từ chối cấp quyền" : c === "redirect_uri_mismatch" ? "Chưa thêm redirect URI " + Auth.redirectUri() + " trong Google Console" : "Đăng nhập thất bại: " + c, 5000);
@@ -333,9 +334,8 @@
   // Thử làm mới token ngầm nếu có Client ID (không hiện popup)
   window.addEventListener("load", () => {
     const s = Util.loadSettings();
-    if (s.clientId && !Auth.getToken() && localStorage.getItem("cartube.wasSignedIn") === "1") {
-      setTimeout(() => Auth.signIn({ interactive: false }).then(() => { Api.clearCache(); navigate(currentView, true); }).catch(() => {}), 800);
-    }
+    // Token hết hạn (1 giờ) mà trước đó đã đăng nhập: làm mới ngầm bằng chuyển hướng prompt=none (không popup)
+    if (s.clientId && !Auth.getToken()) Auth.silentRefresh();
   });
   // Đổi hướng/tỉ lệ màn hình: vẽ lại để lưới cập nhật
   matchMedia("(orientation: portrait)").addEventListener?.("change", () => { if (!Player.isExpanded()) navigate(currentView, true); });
