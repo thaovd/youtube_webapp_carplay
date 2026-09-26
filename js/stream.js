@@ -106,7 +106,7 @@ window.Stream = (function () {
       this.audio = a;
 
       const st = (s) => { this.state = s; this.ev.onStateChange?.({ data: s }); };
-      v.addEventListener("playing", () => { st(STATE.PLAYING); if (this.hasAudio) { this._audioAlign(); this._audioPlay(); } });
+      v.addEventListener("playing", () => { st(STATE.PLAYING); if (this.hasAudio) { if (this.audio.paused) { this._audioAlign(); this._audioPlay(); } } });
       v.addEventListener("pause", () => {
         if (v.ended) return;
         // Trang vào nền: hệ điều hành dừng video nhưng ta giữ tiếng chạy tiếp
@@ -115,14 +115,14 @@ window.Stream = (function () {
       });
       v.addEventListener("waiting", () => { st(STATE.BUFFERING); if (this.hasAudio && !document.hidden) a.pause(); });
       v.addEventListener("ended", () => { this.wantPlaying = false; st(STATE.ENDED); a.pause(); });
-      v.addEventListener("seeking", () => { if (this.hasAudio && !document.hidden) this._audioAlign(); });
+      v.addEventListener("seeking", () => { if (this._progSeek) { this._progSeek = false; return; } if (this.hasAudio) this._audioAlign(); });
       v.addEventListener("error", () => { if (this.video.src || this.dash) { console.warn("video error", v.error); this.ev.onError?.({ data: 5, message: v.error?.message }); } });
       a.addEventListener("ended", () => { if (document.hidden && this.hasAudio) { this.wantPlaying = false; st(STATE.ENDED); } });
       a.addEventListener("error", () => { console.warn("audio error", a.error); });
       // Quay lại từ nền: hình nhảy tới vị trí của tiếng và phát tiếp
       document.addEventListener("visibilitychange", () => {
         if (document.hidden || !this.hasAudio || !this.wantPlaying) return;
-        if (v.paused) { v.currentTime = Math.max(0, a.currentTime + this.avOffset); this._play(); }
+        if (v.paused) { this._progSeek = true; v.currentTime = Math.max(0, a.currentTime + this.avOffset); this._play(); }
       });
       // "Mở khoá" tự phát trên iOS: gọi play() cho cả hai thẻ trong cử chỉ đầu tiên của người dùng
       const unlock = () => { for (const m of [v, a]) { try { const p = m.play(); p?.catch?.(() => {}); m.pause(); } catch (_) {} } document.removeEventListener("pointerdown", unlock, true); };
@@ -239,16 +239,20 @@ window.Stream = (function () {
       }
     }
 
-    /* --- Đồng bộ tiếng theo hình: tiếng = hình − offset (chỉnh bằng tốc độ phát, không tua) --- */
-    setAvOffset(sec) { this.avOffset = sec || 0; if (this.hasAudio && !document.hidden) this._audioAlign(); }
+    /* --- Đồng bộ: tiếng là "đồng hồ chủ", không bao giờ bị tua/đổi tốc độ khi đang phát (tránh khựng).
+       Hình chạy theo tiếng: lệch nhỏ -> chỉnh tốc độ hình (mắt không nhận ra), lệch lớn -> tua hình.
+       Tiếng chỉ được căn lại ở mốc rõ ràng: bắt đầu bài, người dùng tua, đổi mức bù trễ. --- */
+    setAvOffset(sec) { this.avOffset = sec || 0; if (this.hasAudio) this._audioAlign(); }
     _audioTarget() { return Math.max(0, this.video.currentTime - this.avOffset); }
-    _audioAlign() { if (!this.hasAudio) return; this.audio.currentTime = this._audioTarget(); this.audio.playbackRate = 1; }
+    _audioAlign() { if (!this.hasAudio) return; this.audio.currentTime = this._audioTarget(); this.audio.playbackRate = 1; this.video.playbackRate = 1; }
     _audioSync() {
-      if (!this.hasAudio || document.hidden || this.video.paused || this.audio.paused) return;
-      const diff = this.audio.currentTime - this._audioTarget();     // >0: tiếng chạy trước mức mong muốn
-      if (Math.abs(diff) > 0.8) { this._audioAlign(); return; }
-      const rate = Math.abs(diff) < 0.015 ? 1 : 1 - Math.max(-0.05, Math.min(0.05, diff));
-      if (Math.abs(this.audio.playbackRate - rate) > 0.002) this.audio.playbackRate = rate;
+      if (!this.hasAudio) return;
+      if (this.video.paused || this.audio.paused) { if (this.video.playbackRate !== 1) this.video.playbackRate = 1; return; }
+      const diff = this.audio.currentTime - this._audioTarget();     // >0: tiếng đang chạy trước hình
+      if (Math.abs(diff) > 0.8) { this._progSeek = true; this.video.currentTime = Math.max(0, this.audio.currentTime + this.avOffset); this.video.playbackRate = 1; return; }
+      // Hình đuổi theo tiếng bằng tốc độ phát (tối đa ±8%), hội tụ trong ~1-3 giây
+      const rate = Math.abs(diff) < 0.015 ? 1 : 1 + Math.max(-0.08, Math.min(0.08, diff));
+      if (Math.abs(this.video.playbackRate - rate) > 0.002) this.video.playbackRate = rate;
     }
     destroy() { clearInterval(this.syncTimer); this._teardown(); }
   }
