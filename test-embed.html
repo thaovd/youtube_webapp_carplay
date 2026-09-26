@@ -26,8 +26,25 @@ p{color:#aaa}code{background:#333;padding:2px 6px;border-radius:4px}button{font-
 <button id="b5">Phát mục 5</button>
 <div class="box"><div id="f5"></div></div>
 
+<h3>6. IFrame API + videoId, KHÔNG autoplay: bạn bấm nút play đỏ của YouTube</h3>
+<button id="b6">Nạp mục 6</button>
+<div class="box"><div id="f6"></div></div>
+
+<h3>7. Sau khi mục 6 đã phát ≥ 30 giây: bấm nút này để nạp video KHÁC vào cùng trình phát bằng API (tự phát)</h3>
+<button id="b7">Nạp video tiếp theo vào mục 6</button>
+
 <script>
   document.getElementById("origin").textContent = location.href;
+  let p6 = null;
+  document.getElementById("b6").onclick = () => {
+    const make = () => { p6 = new YT.Player("f6", { width: "100%", height: "100%", videoId: "OPf0YbXqDm0",
+      playerVars: { controls: 1, rel: 0, playsinline: 1, origin: location.origin } }); };
+    if (window.YT?.Player) return make();
+    const s = document.createElement("script"); s.src = "https://www.youtube.com/iframe_api";
+    const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { prev?.(); make(); };
+    document.head.appendChild(s);
+  };
+  document.getElementById("b7").onclick = () => { if (p6) p6.loadVideoById("fJ9rUzIMcZQ"); };
   const P = "?autoplay=1&controls=0&rel=0&playsinline=1&iv_load_policy=3&fs=0&disablekb=1&enablejsapi=1&origin=" + encodeURIComponent(location.origin);
   document.getElementById("b3").onclick = () => document.getElementById("f3").src = "https://www.youtube.com/embed/kJQP7kiw5Fk" + P;
   document.getElementById("b4").onclick = () => document.getElementById("f4").src = "https://www.youtube.com/embed/JGwWNGJdvx8" + P;
