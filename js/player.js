@@ -102,8 +102,11 @@ window.Player = (function () {
       if (acceptPlayPause) {
         ms.setActionHandler("play", () => { Util.log("mediaSession play"); yt?.playVideo(); if (dual) ya?.playVideo?.(); });
         ms.setActionHandler("pause", () => {
-          // Lệnh pause đến ngay sau một lần khựng mạng thường là hệ thống "đồng bộ" chứ không phải người dùng -> bỏ qua
-          if (Date.now() - lastStall < 3000) { Util.log("mediaSession pause (bỏ qua: vừa khựng " + ((Date.now() - lastStall) / 1000).toFixed(1) + "s trước)"); return; }
+          // CarPlay/APTV gửi một lệnh pause "giả" khoảng 3-4 giây sau mỗi lần bắt đầu phát (thấy trong nhật ký thiết bị),
+          // và đầu xe cũng hay gửi pause để "đồng bộ" ngay sau khi khựng mạng -> bỏ qua các lệnh trong hai cửa sổ đó.
+          const sincePlay = Date.now() - lastPlayStart, sinceStall = Date.now() - lastStall;
+          if (sincePlay < 6000) { Util.log("mediaSession pause (bỏ qua: mới phát " + (sincePlay / 1000).toFixed(1) + "s)"); return; }
+          if (sinceStall < 3000) { Util.log("mediaSession pause (bỏ qua: vừa khựng " + (sinceStall / 1000).toFixed(1) + "s trước)"); return; }
           Util.log("mediaSession pause"); yt?.pauseVideo(); if (dual) ya?.pauseVideo?.();
         });
       } else {
@@ -123,6 +126,7 @@ window.Player = (function () {
 
   let streamMode = false;        // chế độ Stream: HtmlPlayer (js/stream.js) thay cho YT.Player
   let lastStall = 0;             // thời điểm khựng/tải đệm gần nhất
+  let lastPlayStart = 0, wasPlaying = false;   // mốc bắt đầu/tiếp tục phát gần nhất
   /* Chế độ Stream: tạo trình phát HTML ngay, không chờ IFrame API */
   function initStreamPlayer() {
     streamMode = true; apiReady = true; dual = false;
@@ -216,6 +220,8 @@ window.Player = (function () {
     // Báo cho hệ thống: đang tải đệm vẫn là "playing" (nếu báo "paused", CarPlay/đầu xe sẽ gửi lệnh pause để đồng bộ -> dừng thật)
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = (playing || buffering) ? "playing" : "paused";
     if (buffering) lastStall = Date.now();
+    if (playing && !wasPlaying) lastPlayStart = Date.now();
+    wasPlaying = playing || buffering;
     if (playing) { ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); if (!prefsApplied) { prefsApplied = true; setTimeout(applyPrefs, 600); } } else stopTicker();
     if (dual && ya?.playVideo) {
       if (playing) {
