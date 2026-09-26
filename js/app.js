@@ -271,8 +271,8 @@
       field("Phụ đề mặc định", seg("captions", [[true, "Bật"], [false, "Tắt"]])),
       field("Ngôn ngữ phụ đề ưu tiên", seg("captionLang", [["vi", "Tiếng Việt"], ["en", "English"], ["ja", "日本語"], ["ko", "한국어"]])),
       field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]], () => Player.applyRenderScale())),
-      ...(streamMode ? [] : [field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale()))]),
-      field("Bù trễ tiếng", (() => {
+      ...(streamMode ? [field("DASH (chất lượng cao)", seg("streamDash", [[true, "Bật"], [false, "Tắt"]]))] : [field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale()))]),
+      ...(streamMode ? [] : [field("Bù trễ tiếng", (() => {
         const cur = +s.avOffsetMs || 0;
         const label = cur === 0 ? "Tắt" : (cur > 0 ? "Tiếng chậm " + cur + " ms" : "Tiếng sớm " + (-cur) + " ms");
         const set = (ms) => {
@@ -288,7 +288,7 @@
           el("button", { class: "btn", type: "button", text: "+100", onclick: () => set(cur + 100) }),
           el("button", { class: "btn" + (cur === 0 ? " primary" : ""), type: "button", text: "Tắt", onclick: () => set(0) })
         ]);
-      })())
+      })())])
     ];
     view.replaceChildren(el("div", { class: "settings" }, [
       field("Tài khoản", account),

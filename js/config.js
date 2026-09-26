@@ -44,6 +44,8 @@ window.CARTUBE_DEFAULTS = {
 
   // Địa chỉ máy chủ stream (https://...), dùng cho chế độ stream
   streamServer: "",
+  // Chế độ stream: dùng DASH (720p/1080p, cần MediaSource) hay chỉ mp4 progressive (360p, ổn định nhất)
+  streamDash: true,
 
   // Số video tối đa mỗi trang
   pageSize: 24
