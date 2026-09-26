@@ -1,0 +1,95 @@
+# CarTube stream server: Invidious (+ companion) đứng sau Caddy (HTTPS tự động + CORS)
+# Cài bằng ./install.sh  (xem README.md trong thư mục này)
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+      ALLOWED_REFERER: ${ALLOWED_REFERER}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      - invidious
+
+  invidious:
+    image: quay.io/invidious/invidious:latest
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      INVIDIOUS_CONFIG: |
+        db:
+          dbname: invidious
+          user: kemal
+          password: kemal
+          host: invidious-db
+          port: 5432
+        check_tables: true
+        invidious_companion:
+          - private_url: "http://companion:8282/companion"
+        invidious_companion_key: "${COMPANION_KEY}"
+        hmac_key: "${HMAC_KEY}"
+        domain: "${DOMAIN}"
+        https_only: true
+        external_port: 443
+        statistics_enabled: false
+        registration_enabled: false
+        login_enabled: false
+        default_user_preferences:
+          region: VN
+          quality: dash
+    healthcheck:
+      test: wget -nv --tries=1 --spider http://127.0.0.1:3000/api/v1/stats || exit 1
+      interval: 30s
+      timeout: 5s
+      retries: 2
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "3"
+    depends_on:
+      invidious-db:
+        condition: service_healthy
+
+  companion:
+    image: quay.io/invidious/invidious-companion:latest
+    restart: unless-stopped
+    environment:
+      - SERVER_SECRET_KEY=${COMPANION_KEY}
+    logging:
+      options:
+        max-size: "200m"
+        max-file: "3"
+    cap_drop:
+      - ALL
+    read_only: true
+    volumes:
+      - companioncache:/var/tmp/youtubei.js:rw
+    security_opt:
+      - no-new-privileges:true
+
+  invidious-db:
+    image: docker.io/library/postgres:14
+    restart: unless-stopped
+    volumes:
+      - postgresdata:/var/lib/postgresql/data
+      - ./invidious/config/sql:/config/sql
+      - ./invidious/docker/init-invidious-db.sh:/docker-entrypoint-initdb.d/init-invidious-db.sh
+    environment:
+      POSTGRES_DB: invidious
+      POSTGRES_USER: kemal
+      POSTGRES_PASSWORD: kemal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+
+volumes:
+  postgresdata:
+  companioncache:
+  caddydata:
+  caddyconfig:

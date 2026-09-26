@@ -1,0 +1,29 @@
+# HTTPS tự động (Let's Encrypt) cho {$DOMAIN}; cần cổng 80 và 443 mở từ Internet.
+{$DOMAIN} {
+	encode gzip
+
+	# Chỉ cho phép app của bạn dùng máy chủ (theo Referer/Origin). Đặt ALLOWED_REFERER=* để mở cho mọi nguồn.
+	@blocked {
+		not header_regexp Origin ^{$ALLOWED_REFERER}
+		not header_regexp Referer ^{$ALLOWED_REFERER}
+		not path /api/v1/stats
+	}
+	respond @blocked "Forbidden" 403
+
+	# CORS cho API JSON, manifest DASH, phụ đề và luồng video (dash.js tải bằng fetch)
+	@options method OPTIONS
+	header {
+		Access-Control-Allow-Origin "*"
+		Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+		Access-Control-Allow-Headers "Range, Content-Type"
+		Access-Control-Expose-Headers "Content-Length, Content-Range, Accept-Ranges"
+		Access-Control-Max-Age "86400"
+		-Server
+	}
+	respond @options 204
+
+	reverse_proxy invidious:3000 {
+		header_up X-Forwarded-Proto https
+		flush_interval -1
+	}
+}

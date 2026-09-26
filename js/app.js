@@ -20,7 +20,9 @@
   }
   /* Mở video: theo chế độ trình phát. "youtube" = chuyển cả trang sang youtube.com (dùng phiên đăng nhập/Premium của trình duyệt) */
   function openVideo(list, i) {
-    if (Util.loadSettings().playerMode !== "youtube") return Player.playList(list, i);
+    const s = Util.loadSettings();
+    if (s.playerMode === "stream" && !s.streamServer) { toast("Chưa nhập máy chủ stream trong Cài đặt"); navigate("settings"); return; }
+    if (s.playerMode !== "youtube") return Player.playList(list, i);
     const ids = list.slice(i).map(v => v.id).filter(Boolean).slice(0, 50);
     if (!ids.length) return;
     try { sessionStorage.setItem("cartube.returnView", currentView || "home"); } catch (_) {}
@@ -90,8 +92,9 @@
       chips.replaceChildren(...cats.map(c => el("button", { class: "chip" + (c.id === trendingCat ? " active" : ""), type: "button", text: c.title, onclick: () => { trendingCat = c.id; renderHome(); } })));
       chips.hidden = false;
 
-      const demo = Demo.active();
-      let page = demo ? Demo.trending() : await Api.trending({ categoryId: trendingCat });
+      const useInv = Stream.active() && !Auth.getToken();
+      const demo = !useInv && Demo.active();
+      let page = useInv ? await Stream.trending({ categoryId: trendingCat }) : demo ? Demo.trending() : await Api.trending({ categoryId: trendingCat });
       const items = page.items;
       const g = grid(items);
       view.replaceChildren(g);
@@ -158,13 +161,14 @@
       searchQuery = q; input.value = q; pushHistory(q);
       results.replaceChildren(el("div", { class: "state" }, [el("div", { class: "spinner" })]));
       try {
-        const demo = Demo.active();
-        let page = demo ? Demo.search(q) : await Api.search(q);
+        const useInv = Stream.active() && !Auth.getToken();
+        const demo = !useInv && Demo.active();
+        let page = useInv ? await Stream.search(q) : demo ? Demo.search(q) : await Api.search(q);
         const items = page.items;
         const g = grid(items, { emptyMsg: "Không tìm thấy kết quả." });
         results.replaceChildren(g);
         const addMore = () => { if (page.next) results.append(moreButton(async () => {
-          page = await Api.search(q, { pageToken: page.next });
+          page = useInv ? await Stream.search(q, { page: +page.next }) : await Api.search(q, { pageToken: page.next });
           const start = items.length; items.push(...page.items);
           page.items.forEach((v, i) => g.append(card(v, items, start + i)));
           addMore();
@@ -246,7 +250,19 @@
       ? [el("span", { class: "btn", text: "Đã đăng nhập: " + (st.profile?.name || "Google") }), el("button", { class: "btn danger", type: "button", text: "Đăng xuất", onclick: () => { Auth.signOut(); subsCache = null; renderSettings(); } })]
       : [el("button", { class: "btn primary", type: "button", text: "Đăng nhập Google", onclick: doSignIn })]);
 
-    const ytMode = s.playerMode === "youtube";
+    const ytMode = s.playerMode === "youtube", streamMode = s.playerMode === "stream";
+    const serverInput = el("input", { type: "url", value: s.streamServer || "", placeholder: "https://ddns.vuthao.id.vn", spellcheck: "false", autocapitalize: "off" });
+    const serverRow = el("div", { class: "btn-row" }, [
+      el("button", { class: "btn primary", type: "button", text: "Lưu & kiểm tra", onclick: async () => {
+        const url = serverInput.value.trim().replace(/\/+$/, "");
+        Util.saveSettings({ streamServer: url });
+        if (!url) { toast("Đã xoá máy chủ"); return; }
+        toast("Đang kiểm tra…");
+        try { const st = await Stream.stats(); toast("Máy chủ OK (Invidious " + (st.version || "") + "). Đang tải lại…"); setTimeout(() => location.reload(), 800); }
+        catch (e) { toast("Không kết nối được: " + e.message, 5000); }
+      } })
+    ]);
+    const streamFields = streamMode ? [field("Máy chủ stream", el("div", { class: "field" }, [serverInput, serverRow]))] : [];
     const playerFields = ytMode ? [
       el("div", { class: "field" }, [el("label", { text: "Tạm dừng ở chế độ YouTube.com" }),
         el("div", { class: "muted", text: "Tự phát, phụ đề, chất lượng, khung ảo, bù trễ tiếng, nút to và cử chỉ của app. Các mục này dùng trình phát của YouTube." })])
@@ -255,7 +271,7 @@
       field("Phụ đề mặc định", seg("captions", [[true, "Bật"], [false, "Tắt"]])),
       field("Ngôn ngữ phụ đề ưu tiên", seg("captionLang", [["vi", "Tiếng Việt"], ["en", "English"], ["ja", "日本語"], ["ko", "한국어"]])),
       field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]], () => Player.applyRenderScale())),
-      field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale())),
+      ...(streamMode ? [] : [field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale()))]),
       field("Bù trễ tiếng", (() => {
         const cur = +s.avOffsetMs || 0;
         const label = cur === 0 ? "Tắt" : (cur > 0 ? "Tiếng chậm " + cur + " ms" : "Tiếng sớm " + (-cur) + " ms");
@@ -276,7 +292,8 @@
     ];
     view.replaceChildren(el("div", { class: "settings" }, [
       field("Tài khoản", account),
-      field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"], ["youtube", "YouTube.com (Premium)"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
+      field("Trình phát", seg("playerMode", [["custom", "Nút lớn (embed)"], ["stream", "Stream (máy chủ riêng)"], ["native", "YouTube gốc"], ["youtube", "YouTube.com (Premium)"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
+      ...streamFields,
       field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
       field("Ngôn ngữ giọng nói", seg("speechLang", [["vi-VN", "Tiếng Việt"], ["en-US", "English"], ["ja-JP", "日本語"], ["ko-KR", "한국어"]])),
       ...playerFields,

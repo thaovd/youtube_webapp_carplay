@@ -76,6 +76,10 @@ Nếu triển khai ở tên miền khác hoặc muốn dùng project Google Clou
 
 - **Nút lớn (tuỳ biến)**: embed YouTube với điều khiển của app (cử chỉ, bù trễ tiếng, che giao diện, ép chất lượng).
 - **YouTube gốc**: embed với điều khiển của YouTube (có bánh răng chất lượng/phụ đề).
+- **Stream (máy chủ riêng)**: phát bằng thẻ `<video>` của app, luồng lấy từ máy chủ Invidious tự host
+  (xem `server/README.md`). Không quảng cáo, không cần đăng nhập Google để phát, chọn chất lượng thật (dash.js),
+  phụ đề WebVTT, bù trễ tiếng chính xác bằng thẻ audio riêng. Chưa đăng nhập thì xu hướng/tìm kiếm cũng lấy
+  từ máy chủ này, không tốn quota Google.
 - **YouTube.com (Premium)**: bấm video sẽ chuyển cả trang sang youtube.com với hàng đợi làm playlist tạm.
   Vì là tầng trên cùng nên trình duyệt dùng phiên đăng nhập YouTube của bạn (Premium, không quảng cáo),
   điều mà iframe embed không làm được trong WebView chặn cookie bên thứ ba (Safari, APTV…).

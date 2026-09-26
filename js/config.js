@@ -39,7 +39,11 @@ window.CARTUBE_DEFAULTS = {
 
   // Trình phát: custom (nút lớn, tuỳ biến) | native (embed với điều khiển của YouTube)
   //             | youtube (mở thẳng youtube.com ở tầng trên cùng: dùng phiên đăng nhập/Premium của trình duyệt, không quảng cáo)
+  //             | stream (máy chủ Invidious riêng, xem server/README.md: không quảng cáo, chọn chất lượng thật, bù trễ chính xác)
   playerMode: "custom",
+
+  // Địa chỉ máy chủ stream (https://...), dùng cho chế độ stream
+  streamServer: "",
 
   // Số video tối đa mỗi trang
   pageSize: 24

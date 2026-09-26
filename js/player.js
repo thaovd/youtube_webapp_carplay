@@ -66,6 +66,8 @@ window.Player = (function () {
     ui.sheet.querySelector(".sheet-backdrop").onclick = closeSheet;
     // Chế độ "trình phát YouTube gốc": dùng thẳng iframe thường (có menu phụ đề/chất lượng của YouTube)
     if (Util.loadSettings().playerMode === "native") { fallback = true; ui.root.classList.add("fallback"); }
+    // Chế độ Stream (máy chủ riêng)
+    if (window.Stream && Stream.active()) initStreamPlayer();
     ui.fs.onclick = toggleFullscreen;
     ui.close.onclick = collapse;
     ui.miniExpand.onclick = expand;
@@ -108,9 +110,18 @@ window.Player = (function () {
   function seekTarget() { return (ui.seek.value / 1000) * (yt?.getDuration?.() || 0); }
   function updateSeekStyle() { ui.seek.style.setProperty("--pct", (ui.seek.value / 10) + "%"); }
 
+  let streamMode = false;        // chế độ Stream: HtmlPlayer (js/stream.js) thay cho YT.Player
+  /* Chế độ Stream: tạo trình phát HTML ngay, không chờ IFrame API */
+  function initStreamPlayer() {
+    streamMode = true; apiReady = true; dual = false;
+    window.YT = window.YT || {}; window.YT.PlayerState = window.YT.PlayerState || Stream.STATE;
+    yt = new Stream.HtmlPlayer("yt-player", { events: { onReady, onStateChange, onError } });
+    yt.setAvOffset((+Util.loadSettings().avOffsetMs || 0) / 1000);
+    ui.root.classList.add("stream");
+  }
   /* Được gọi bởi IFrame API khi tải xong */
   window.onYouTubeIframeAPIReady = function () {
-    if (fallback) return;
+    if (fallback || streamMode) return;
     apiReady = true;
     clearTimeout(fallbackTimer);
     const s = Util.loadSettings();
@@ -205,6 +216,7 @@ window.Player = (function () {
     // 101/150: chủ sở hữu không cho phép nhúng; 100: video bị xoá/riêng tư; 2/5: lỗi tham số/HTML5
     const v = queue[index];
     ui.err.hidden = false;
+    ui.err.querySelector("p").textContent = streamMode ? ("Máy chủ stream không phát được video này" + (e.message ? ": " + e.message : "")) : "Video này không cho phép phát nhúng.";
     ui.errLink.href = v ? "https://www.youtube.com/watch?v=" + v.id : "https://www.youtube.com";
     if (Util.loadSettings().autoplayNext && [100, 101, 150].includes(e.data)) {
       toast("Video không phát được, chuyển video tiếp theo…");
@@ -283,8 +295,9 @@ window.Player = (function () {
   }
   /* Đổi mức bù trễ khi đang phát (ms). Bật/tắt hoàn toàn (0 <-> khác 0) cần tải lại trang để tạo/huỷ trình phát thứ hai */
   function setAvOffset(ms) {
-    const wasDual = dual, nextDual = ms !== 0;
     Util.saveSettings({ avOffsetMs: ms });
+    if (streamMode) { yt?.setAvOffset?.(ms / 1000); return false; }
+    const wasDual = dual, nextDual = ms !== 0;
     if (wasDual === nextDual) { avOffset = ms / 1000; if (dual) forceSync(); return false; }
     return true;   // cần reload
   }
@@ -297,6 +310,7 @@ window.Player = (function () {
   function applyRenderScale() {
     const frame = document.getElementById("yt-player");
     if (!frame || !ui.stage) return;
+    if (streamMode) { frame.style.cssText = ""; return; }
     const s = Util.loadSettings();
     const v = (fallback || s.virtualFrame === false) ? null : VIRTUAL[s.quality];
     // Kích thước thật của vùng video; khi toàn màn hình lấy theo viewport (tránh giá trị cũ lúc đang chuyển trạng thái)
@@ -366,7 +380,7 @@ window.Player = (function () {
       else { yt.setPlaybackQualityRange?.(q, q); yt.setPlaybackQuality?.(q); }
     } catch (_) {}
     if (!silent) {
-      toast("Đã yêu cầu " + (QUALITY_LABEL[q] || q) + ". YouTube có thể tự điều chỉnh theo mạng.");
+      toast(streamMode ? "Chất lượng: " + (QUALITY_LABEL[q] || q) : "Đã yêu cầu " + (QUALITY_LABEL[q] || q) + ". YouTube có thể tự điều chỉnh theo mạng.");
       setTimeout(() => { try { const cur = yt.getPlaybackQuality(); if (cur && cur !== "unknown") toast("Đang phát: " + (QUALITY_LABEL[cur] || cur)); } catch (_) {} }, 3000);
     }
   }
@@ -515,5 +529,5 @@ window.Player = (function () {
   }
 
   document.addEventListener("DOMContentLoaded", () => { bindUi(); bindGestures(); });
-  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index, setCaptions, requestQuality, applyRenderScale, openSheet, setAvOffset, isDual: () => dual };
+  return { playList, next, prev, toggle, expand, collapse, isExpanded, getQueue: () => queue, getIndex: () => index, setCaptions, requestQuality, applyRenderScale, openSheet, setAvOffset, isDual: () => dual, isStream: () => streamMode };
 })();
