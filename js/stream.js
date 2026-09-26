@@ -98,10 +98,15 @@ window.Stream = (function () {
       v.preload = "auto"; v.crossOrigin = "anonymous"; v.disableRemotePlayback = true;
       holder.replaceWith(v);
       this.video = v;
+      // Thẻ <audio> cho phát nền: chỉ tạo khi bật (trên iOS thẻ media thứ hai có thể gây lệnh pause giả từ hệ thống)
+      const bgSetting = Util.loadSettings().bgAudio;
+      const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      this.bgEnabled = bgSetting === true || (bgSetting !== false && !isIOS);
       const a = document.createElement("audio");
       a.id = "yt-audio"; a.preload = "none"; a.crossOrigin = "anonymous";
-      v.parentNode.appendChild(a);
+      if (this.bgEnabled) v.parentNode.appendChild(a);
       this.audio = a;
+      Util.log("stream player", "bgAudio=" + this.bgEnabled, "iOS=" + isIOS);
 
       const st = (s) => { this.state = s; this.ev.onStateChange?.({ data: s }); };
       for (const evn of ["loadstart", "loadedmetadata", "canplay", "play", "playing", "pause", "waiting", "stalled", "seeking", "seeked", "ended", "error", "emptied", "abort", "suspend", "ratechange"]) {
@@ -126,7 +131,7 @@ window.Stream = (function () {
         this._bgStop(true);
       });
       // "Mở khoá" tự phát trên iOS: gọi play() cho cả hai thẻ trong cử chỉ đầu tiên của người dùng
-      const unlock = () => { for (const m of [v, a]) { try { const p = m.play(); p?.catch?.(() => {}); m.pause(); } catch (_) {} } document.removeEventListener("pointerdown", unlock, true); };
+      const unlock = () => { for (const m of (this.bgEnabled ? [v, a] : [v])) { try { const p = m.play(); p?.catch?.(() => {}); m.pause(); } catch (_) {} } document.removeEventListener("pointerdown", unlock, true); };
       document.addEventListener("pointerdown", unlock, true);
       setTimeout(() => this.ev.onReady?.(), 0);
     }
@@ -167,7 +172,7 @@ window.Stream = (function () {
       this.curCaption = null;
       // Luồng tiếng riêng, chỉ dùng khi vào nền
       const af = (info.adaptiveFormats || []).filter(f => /^audio\/mp4/.test(f.type || "")).sort((a, b) => (+b.bitrate || 0) - (+a.bitrate || 0))[0];
-      this.audioUrl = af && !info.liveNow ? abs(af.url) : null;
+      this.audioUrl = this.bgEnabled && af && !info.liveNow ? abs(af.url) : null;
       // Nguồn: DASH (chọn chất lượng thật) -> progressive (mp4 có sẵn tiếng)
       const s = Util.loadSettings();
       const pref = s.quality || "auto";

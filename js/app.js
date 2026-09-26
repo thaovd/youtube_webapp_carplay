@@ -295,7 +295,8 @@
       field("Trình phát", seg("playerMode", [["custom", "Nút lớn (embed)"], ["stream", "Stream (máy chủ riêng)"], ["native", "YouTube gốc"], ["youtube", "YouTube.com (Premium)"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
       ...streamFields,
       field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
-      field("Phím điều khiển hệ thống", seg("mediaKeys", [["auto", "Tự động"], [true, "Bật"], [false, "Tắt"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
+      field("Phím điều khiển hệ thống", seg("mediaKeys", [[true, "Bật"], [false, "Tắt"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
+      ...(streamMode ? [field("Phát tiếng khi vào nền", seg("bgAudio", [["auto", "Tự động"], [true, "Bật"], [false, "Tắt"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); }))] : []),
       field("Ngôn ngữ giọng nói", seg("speechLang", [["vi-VN", "Tiếng Việt"], ["en-US", "English"], ["ja-JP", "日本語"], ["ko-KR", "한국어"]])),
       ...playerFields,
       field("Nhật ký sự kiện", el("div", { class: "btn-row" }, [

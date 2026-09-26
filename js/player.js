@@ -98,9 +98,7 @@ window.Player = (function () {
     });
     if ("mediaSession" in navigator) {
       const ms = navigator.mediaSession;
-      const mk = Util.loadSettings().mediaKeys;
-      const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      const acceptPlayPause = mk === true || (mk !== false && !(isIOS && Util.loadSettings().playerMode === "stream"));
+      const acceptPlayPause = Util.loadSettings().mediaKeys !== false;
       if (acceptPlayPause) {
         ms.setActionHandler("play", () => { Util.log("mediaSession play"); yt?.playVideo(); if (dual) ya?.playVideo?.(); });
         ms.setActionHandler("pause", () => { Util.log("mediaSession pause"); yt?.pauseVideo(); if (dual) ya?.pauseVideo?.(); });
