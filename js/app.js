@@ -297,6 +297,14 @@
       field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
       field("Ngôn ngữ giọng nói", seg("speechLang", [["vi-VN", "Tiếng Việt"], ["en-US", "English"], ["ja-JP", "日本語"], ["ko-KR", "한국어"]])),
       ...playerFields,
+      field("Nhật ký sự kiện", el("div", { class: "btn-row" }, [
+        el("button", { class: "btn", type: "button", text: "Xem nhật ký", onclick: () => {
+          const box = el("textarea", { class: "logbox", readonly: true });
+          box.value = "UA: " + navigator.userAgent + "\nbuild " + window.CARTUBE_BUILD + " | " + innerWidth + "x" + innerHeight + " | hidden=" + document.hidden + " | MSE=" + !!(window.ManagedMediaSource || window.MediaSource) + "\n\n" + Util.getLog();
+          const copy = el("button", { class: "btn primary", type: "button", text: "Sao chép", onclick: async () => { try { await navigator.clipboard.writeText(box.value); toast("Đã sao chép"); } catch (_) { box.select(); document.execCommand("copy"); toast("Đã sao chép"); } } });
+          view.replaceChildren(el("div", { class: "settings" }, [el("div", { class: "btn-row" }, [copy, el("button", { class: "btn", type: "button", text: "← Cài đặt", onclick: renderSettings })]), box]));
+        } })
+      ])),
       field("Phiên bản", el("div", { class: "btn-row" }, [
         el("span", { class: "btn", text: "Bản " + (window.CARTUBE_BUILD.startsWith("__") ? "cục bộ" : window.CARTUBE_BUILD) }),
         el("button", { class: "btn primary", type: "button", text: "Tải lại bản mới", onclick: async () => { const updated = await checkForUpdate(false); if (!updated) setTimeout(hardReload, 600); } })

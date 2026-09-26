@@ -71,7 +71,21 @@ window.Util = (function () {
     toastTimer = setTimeout(() => (t.hidden = true), ms);
   }
 
+  /* Nhật ký sự kiện (để chẩn đoán trên thiết bị không có console) */
+  const LOG_MAX = 300, logBuf = [];
+  const t0 = Date.now();
+  function log(...args) {
+    const line = ((Date.now() - t0) / 1000).toFixed(2).padStart(8) + "  " + args.map(a => typeof a === "string" ? a : (() => { try { return JSON.stringify(a); } catch (_) { return String(a); } })()).join(" ");
+    logBuf.push(line); if (logBuf.length > LOG_MAX) logBuf.shift();
+  }
+  function getLog() { return logBuf.join("\n"); }
+  window.addEventListener("error", (e) => log("JS ERROR:", e.message, e.filename ? e.filename.split("/").pop() + ":" + e.lineno : ""));
+  window.addEventListener("unhandledrejection", (e) => log("PROMISE ERROR:", e.reason?.message || String(e.reason)));
+  document.addEventListener("visibilitychange", () => log("visibility:", document.visibilityState));
+  window.addEventListener("pagehide", () => log("pagehide")); window.addEventListener("pageshow", (e) => log("pageshow persisted=" + e.persisted));
+  window.addEventListener("resize", () => log("resize", innerWidth + "x" + innerHeight));
+
   function decodeHtml(s) { const t = document.createElement("textarea"); t.innerHTML = s || ""; return t.value; }
 
-  return { $, $$, el, loadSettings, saveSettings, parseDuration, fmtTime, fmtCount, fmtAgo, bestThumb, toast, decodeHtml };
+  return { $, $$, el, loadSettings, saveSettings, parseDuration, fmtTime, fmtCount, fmtAgo, bestThumb, toast, decodeHtml, log, getLog };
 })();

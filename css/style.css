@@ -175,6 +175,7 @@ img { display: block; }
 .sheet-list { display: grid; gap: calc(var(--gap) * .6); overflow-y: auto; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .sheet-list .btn { justify-content: flex-start; text-align: left; }
 .sheet-list .btn.active { background: var(--fg); color: var(--bg); }
+.logbox { width: 100%; height: 50vh; background: #000; color: #9f9; font: 12px/1.35 ui-monospace, Menlo, Consolas, monospace; border: 1px solid #333; border-radius: 8px; padding: 8px; white-space: pre; overflow: auto; user-select: text; -webkit-user-select: text; }
 @media (orientation: landscape) and (min-width: 900px) { #sheet { align-items: center; } .sheet-panel { border-radius: var(--radius); } }
 
 /* Biểu tượng chuyển đổi play/pause, mute */
@@ -247,6 +248,9 @@ audio#yt-audio { display: none; }
 .stepper { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .stepper .btn { min-width: calc(var(--touch) * 1.2); padding: 0 .8em; }
 .stepper .val { flex: 1; min-width: 9em; text-align: center; font-weight: 700; }
+
+/* Vòng xoay khi tải đệm */
+#player.buffering #player-stage::after { content: ""; position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border: 6px solid rgba(255,255,255,.25); border-top-color: #fff; border-radius: 50%; animation: spin .9s linear infinite; z-index: 4; pointer-events: none; }
 
 /* Màn che khi tạm dừng / kết thúc / chưa phát */
 #pause-cover { position: absolute; inset: 0; z-index: 1; background: #000; pointer-events: none; overflow: hidden; }

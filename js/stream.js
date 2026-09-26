@@ -104,6 +104,10 @@ window.Stream = (function () {
       this.audio = a;
 
       const st = (s) => { this.state = s; this.ev.onStateChange?.({ data: s }); };
+      for (const evn of ["loadstart", "loadedmetadata", "canplay", "play", "playing", "pause", "waiting", "stalled", "seeking", "seeked", "ended", "error", "emptied", "abort", "suspend", "ratechange"]) {
+        v.addEventListener(evn, () => Util.log("video:" + evn, "t=" + v.currentTime.toFixed(2), "rs=" + v.readyState, "net=" + v.networkState, v.paused ? "paused" : "", evn === "error" ? (v.error?.code + " " + v.error?.message) : ""));
+      }
+      for (const evn of ["play", "playing", "pause", "waiting", "ended", "error"]) a.addEventListener(evn, () => Util.log("audio:" + evn, "t=" + a.currentTime.toFixed(2)));
       v.addEventListener("playing", () => { st(STATE.PLAYING); });
       v.addEventListener("pause", () => {
         if (v.ended) return;
@@ -130,6 +134,7 @@ window.Stream = (function () {
     /* --- Nền: tiếng qua <audio> --- */
     _bgStart() {
       if (this.bg || !this.audioUrl) return;
+      Util.log("bg start");
       this.bg = true;
       if (this.audio.src !== this.audioUrl) this.audio.src = this.audioUrl;
       this.audio.currentTime = this.video.currentTime || 0;
@@ -137,6 +142,7 @@ window.Stream = (function () {
     }
     _bgStop(resumeVideo) {
       if (!this.bg) return;
+      Util.log("bg stop");
       this.bg = false;
       const t = this.audio.currentTime;
       this.audio.pause();
@@ -167,6 +173,7 @@ window.Stream = (function () {
       const pref = s.quality || "auto";
       const useDash = s.streamDash !== false && !info.liveNow && info.dashUrl && await ensureDash();
       if (token !== this.token) return;
+      Util.log("load", id, "dash=" + !!useDash, "audioUrl=" + !!this.audioUrl, "hidden=" + document.hidden, "formats=" + (info.formatStreams || []).map(f => f.resolution).join(","));
       if (useDash) this._playDash(abs(info.dashUrl) + (info.dashUrl.includes("?") ? "&" : "?") + "local=true", pref);
       else if (info.hlsUrl && info.liveNow) { this.video.src = abs(info.hlsUrl) + "?local=true"; this.levels = []; this._play(); }
       else { if (info.dashUrl && s.streamDash !== false) toast("Không dùng được DASH (" + (dashReason || "lỗi") + "), phát mp4 " + (this._bestProgressiveHeight() || 360) + "p", 3500); this._playProgressive(pref); }
@@ -185,7 +192,7 @@ window.Stream = (function () {
       const d = window.dashjs.MediaPlayer().create();
       this.dash = d;
       try { d.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: pref === "auto", audio: true } }, buffer: { fastSwitchEnabled: true } } }); } catch (_) {}
-      d.on("error", (e) => { console.warn("dash error", e); if (this.dash === d) { try { d.reset(); } catch (_) {} this.dash = null; dashReason = "lỗi DASH"; toast("DASH lỗi, chuyển sang mp4", 2500); this._playProgressive(pref); } });
+      d.on("error", (e) => { console.warn("dash error", e); Util.log("dash error", e?.error?.code || e?.error, e?.error?.message || ""); if (this.dash === d) { try { d.reset(); } catch (_) {} this.dash = null; dashReason = "lỗi DASH"; toast("DASH lỗi, chuyển sang mp4", 2500); this._playProgressive(pref); } });
       d.on("streamInitialized", () => {
         try { this.levels = DJ.levels(d).map(l => Object.assign(l, { q: qOfHeight(l.height) })); } catch (e) { console.warn(e); this.levels = []; }
         if (pref !== "auto") this.setPlaybackQuality(pref);
@@ -207,9 +214,9 @@ window.Stream = (function () {
     getDuration() { return this.video.duration && isFinite(this.video.duration) ? this.video.duration : (this.info?.lengthSeconds || 0); }
     getCurrentTime() { return this.bg ? this.audio.currentTime : (this.video.currentTime || 0); }
     getPlayerState() { return this.state; }
-    playVideo() { this.wantPlaying = true; if (document.hidden && this.audioUrl) { if (this.bg) { const p = this.audio.play(); p?.catch?.(() => {}); } else this._bgStart(); this.state = STATE.PLAYING; this.ev.onStateChange?.({ data: STATE.PLAYING }); } else this._play(); }
-    pauseVideo() { this.wantPlaying = false; if (this.bg) { this.audio.pause(); this.state = STATE.PAUSED; this.ev.onStateChange?.({ data: STATE.PAUSED }); } else this.video.pause(); }
-    seekTo(t) { if (this.bg) this.audio.currentTime = Math.max(0, t); else this.video.currentTime = Math.max(0, t); }
+    playVideo() { Util.log("api playVideo"); this.wantPlaying = true; if (document.hidden && this.audioUrl) { if (this.bg) { const p = this.audio.play(); p?.catch?.(() => {}); } else this._bgStart(); this.state = STATE.PLAYING; this.ev.onStateChange?.({ data: STATE.PLAYING }); } else this._play(); }
+    pauseVideo() { Util.log("api pauseVideo"); this.wantPlaying = false; if (this.bg) { this.audio.pause(); this.state = STATE.PAUSED; this.ev.onStateChange?.({ data: STATE.PAUSED }); } else this.video.pause(); }
+    seekTo(t) { Util.log("api seekTo", t.toFixed(1)); if (this.bg) this.audio.currentTime = Math.max(0, t); else this.video.currentTime = Math.max(0, t); }
     isMuted() { return this.video.muted; }
     mute() { this.video.muted = true; this.audio.muted = true; }
     unMute() { this.video.muted = false; this.audio.muted = false; }

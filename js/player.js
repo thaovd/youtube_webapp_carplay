@@ -98,8 +98,8 @@ window.Player = (function () {
     });
     if ("mediaSession" in navigator) {
       const ms = navigator.mediaSession;
-      ms.setActionHandler("play", () => { yt?.playVideo(); if (dual) ya?.playVideo?.(); });
-      ms.setActionHandler("pause", () => { yt?.pauseVideo(); if (dual) ya?.pauseVideo?.(); });
+      ms.setActionHandler("play", () => { Util.log("mediaSession play"); yt?.playVideo(); if (dual) ya?.playVideo?.(); });
+      ms.setActionHandler("pause", () => { Util.log("mediaSession pause"); yt?.pauseVideo(); if (dual) ya?.pauseVideo?.(); });
       ms.setActionHandler("nexttrack", next);
       ms.setActionHandler("previoustrack", prev);
       ms.setActionHandler("seekbackward", () => seekBy(-10));
@@ -194,9 +194,13 @@ window.Player = (function () {
   function onStateChange(e) {
     const S = YT.PlayerState;
     const playing = e.data === S.PLAYING;
+    Util.log("state", { "-1": "UNSTARTED", "0": "ENDED", "1": "PLAYING", "2": "PAUSED", "3": "BUFFERING", "5": "CUED" }[e.data] || e.data);
     setCover(e.data);
-    ui.play.classList.toggle("is-playing", playing);
-    ui.miniPlay.classList.toggle("is-playing", playing);
+    // Đang tải đệm: giữ biểu tượng "đang phát" + vòng xoay, tránh trông như bị tạm dừng
+    const buffering = e.data === S.BUFFERING;
+    ui.root.classList.toggle("buffering", buffering);
+    ui.play.classList.toggle("is-playing", playing || buffering);
+    ui.miniPlay.classList.toggle("is-playing", playing || buffering);
     if ("mediaSession" in navigator) navigator.mediaSession.playbackState = playing ? "playing" : "paused";
     if (playing) { ui.dur.textContent = fmtTime(yt.getDuration()); startTicker(); if (!prefsApplied) { prefsApplied = true; setTimeout(applyPrefs, 600); } } else stopTicker();
     if (dual && ya?.playVideo) {
@@ -213,6 +217,7 @@ window.Player = (function () {
     if (e.data === S.ENDED) { if (Util.loadSettings().autoplayNext) next(); }
   }
   function onError(e) {
+    Util.log("player error", e?.data, e?.message || "");
     // 101/150: chủ sở hữu không cho phép nhúng; 100: video bị xoá/riêng tư; 2/5: lỗi tham số/HTML5
     const v = queue[index];
     ui.err.hidden = false;
@@ -278,6 +283,7 @@ window.Player = (function () {
     if (index > 0) loadIndex(index - 1);
   }
   function toggle() {
+    Util.log("ui toggle");
     if (!yt?.getPlayerState) return;
     if (yt.getPlayerState() === YT.PlayerState.PLAYING) { yt.pauseVideo(); if (dual) ya?.pauseVideo?.(); }
     else { yt.playVideo(); if (dual) ya?.playVideo?.(); }
@@ -485,7 +491,7 @@ window.Player = (function () {
       const dx = e.clientX - start.x, dy = e.clientY - start.y, dt = Date.now() - start.t, onVideo = start.onVideo;
       start = null;
       const vertical = Math.abs(dy) > Math.abs(dx) * 1.5;
-      if (dt < 800 && vertical && dy > SWIPE) { onSwipeDown(); return; }
+      if (dt < 800 && vertical && dy > SWIPE) { Util.log("gesture swipe down"); onSwipeDown(); return; }
       if (dt < 800 && vertical && dy < -SWIPE && onVideo) { enterVideoFull(); return; }   // vuốt lên trên video = toàn màn hình
       if (onVideo && Math.hypot(dx, dy) < TAP) {
         const now = Date.now();
@@ -498,7 +504,7 @@ window.Player = (function () {
           else if (fx > 2 / 3) { seekBy(10); showSeekHint("right"); }
           else toggleFullscreen();
         }
-        else { lastTap = now; tapTimer = setTimeout(() => { if (!fallback) toggle(); }, DOUBLE_MS); }  // chạm 1 lần = phát/dừng
+        else { lastTap = now; tapTimer = setTimeout(() => { Util.log("gesture single tap"); if (!fallback) toggle(); }, DOUBLE_MS); }  // chạm 1 lần = phát/dừng
       }
     });
     ui.gesture.addEventListener("dblclick", (e) => e.preventDefault());
