@@ -4,7 +4,7 @@ Web app **tĩnh** (HTML + CSS + JavaScript thuần, không cần backend) mô ph
 tối ưu cho màn hình nhỏ trên xe ô tô (Android head unit, CarPlay web browser, máy tính bảng gắn xe…).
 
 - Nút thao tác lớn (≥ 60 px), giao diện tối, chữ to, có thể phóng giao diện 3 mức.
-- Phát video bằng **YouTube IFrame Player** (embed), điều khiển tuỳ biến: Phát/Dừng, ±10 s, Trước/Sau, Tắt tiếng, Toàn màn hình, thanh tua lớn.
+- Phát video bằng thẻ `<video>` của app, luồng lấy từ **máy chủ Invidious tự host** (`server/`): không quảng cáo, chọn chất lượng thật (DASH), phụ đề, điều khiển tuỳ biến: Phát/Dừng, ±10 s, Trước/Sau, Tắt tiếng, Toàn màn hình, thanh tua lớn.
 - **Dữ liệu thật** từ YouTube Data API v3: Thịnh hành theo quốc gia & thể loại, Tìm kiếm (gõ hoặc **giọng nói**), Kênh đăng ký (video mới nhất), Video đã thích, Playlist cá nhân.
 - Đăng nhập Google (OAuth 2.0, quyền chỉ đọc `youtube.readonly`) – chạy hoàn toàn trên trình duyệt.
 - Tự thích ứng nhiều tỉ lệ màn hình: **4:3, 16:9, 21:9** và cả màn dọc; màn 21:9 hiện danh sách phát cạnh video.
@@ -15,11 +15,12 @@ tối ưu cho màn hình nhỏ trên xe ô tô (Android head unit, CarPlay web b
 ```
 index.html            Giao diện chính
 css/style.css         Giao diện tối, responsive theo tỉ lệ màn hình
-js/config.js          Cấu hình mặc định (Client ID, API key, vùng, ngôn ngữ…)
+js/config.js          Cấu hình mặc định (Client ID, máy chủ stream, vùng, ngôn ngữ…)
 js/util.js            Tiện ích (định dạng thời gian, lưu cài đặt…)
 js/auth.js            Đăng nhập Google (Google Identity Services)
 js/api.js             Gọi YouTube Data API v3
-js/player.js          Trình phát IFrame + hàng đợi + điều khiển
+js/stream.js          Trình phát HTML (dash.js, phụ đề, phát nền) + API Invidious (xu hướng, tìm kiếm)
+js/player.js          Giao diện trình phát: hàng đợi, điều khiển, cử chỉ, màn che
 js/app.js             Màn hình: Thịnh hành, Đăng ký, Tìm kiếm, Thư viện, Cài đặt
 manifest.webmanifest  PWA
 ```
@@ -51,14 +52,14 @@ Repo đã có workflow `.github/workflows/pages.yml`. Để có link công khai:
 Workflow gắn mã commit vào các file tài nguyên (`?v=abc1234`) và tạo `version.txt`; app kiểm tra file này khi mở
 và tự tải lại nếu có bản mới, nên trình duyệt mobile không bị kẹt bản cũ. Trong Cài đặt có nút "Tải lại bản mới".
 
-Khi chưa đăng nhập, app chạy ở **chế độ demo** với video mẫu để xem giao diện.
+Xu hướng và tìm kiếm lấy từ máy chủ stream, không cần đăng nhập. Đăng nhập Google chỉ cần cho Kênh đăng ký và Thư viện.
 Nếu script YouTube IFrame API bị chặn, trình phát tự chuyển sang iframe nhúng thường.
 
 ## Đăng nhập Google
 
 Client ID OAuth đã được cài sẵn trong `js/config.js` (giá trị này là công khai, được bảo vệ bằng danh sách
 *Authorized JavaScript origins* trong Google Cloud Console). Người dùng chỉ cần bấm **Đăng nhập Google**;
-không cần nhập API key. Chưa đăng nhập thì app chạy ở chế độ demo.
+không cần nhập API key.
 
 Nếu triển khai ở tên miền khác hoặc muốn dùng project Google Cloud riêng:
 
@@ -70,20 +71,12 @@ Nếu triển khai ở tên miền khác hoặc muốn dùng project Google Clou
    đúng URL trang app (ví dụ `https://thaovd.github.io/youtube_webapp_carplay/`) để đăng nhập kiểu chuyển hướng
    hoạt động khi trình duyệt chặn popup (mobile, trình duyệt ô tô).
 4. Dán Client ID vào `js/config.js`.
-5. (Nâng cao, tuỳ chọn) `apiKey` trong `js/config.js` cho phép xem Xu hướng / Tìm kiếm thật khi chưa đăng nhập.
 
-## Chế độ trình phát
+## Trình phát
 
-- **Nút lớn (tuỳ biến)**: embed YouTube với điều khiển của app (cử chỉ, bù trễ tiếng, che giao diện, ép chất lượng).
-- **YouTube gốc**: embed với điều khiển của YouTube (có bánh răng chất lượng/phụ đề).
-- **Stream (máy chủ riêng)**: phát bằng thẻ `<video>` của app, luồng lấy từ máy chủ Invidious tự host
-  (xem `server/README.md`). Không quảng cáo, không cần đăng nhập Google để phát, chọn chất lượng thật (dash.js),
-  phụ đề WebVTT, bù trễ tiếng chính xác bằng thẻ audio riêng. Chưa đăng nhập thì xu hướng/tìm kiếm cũng lấy
-  từ máy chủ này, không tốn quota Google.
-- **YouTube.com (Premium)**: bấm video sẽ chuyển cả trang sang youtube.com với hàng đợi làm playlist tạm.
-  Vì là tầng trên cùng nên trình duyệt dùng phiên đăng nhập YouTube của bạn (Premium, không quảng cáo),
-  điều mà iframe embed không làm được trong WebView chặn cookie bên thứ ba (Safari, APTV…).
-  Các tính năng của app trong lúc phát tạm dừng ở chế độ này; bấm Back để về app.
+App chỉ dùng một trình phát: thẻ `<video>` với luồng từ máy chủ Invidious cố định trong `js/config.js`
+(`streamServer`). DASH qua dash.js khi có MediaSource (iOS 17.1+), mp4 progressive khi không; phụ đề WebVTT;
+phát tiếng khi vào nền qua thẻ audio (tuỳ chọn). Cách dựng máy chủ: `server/README.md`.
 
 ## Ghi chú kỹ thuật
 

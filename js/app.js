@@ -18,20 +18,7 @@
   function stateMsg(msg, actions = []) {
     view.replaceChildren(el("div", { class: "state" }, [el("p", { text: msg }), ...actions]));
   }
-  /* Mở video: theo chế độ trình phát. "youtube" = chuyển cả trang sang youtube.com (dùng phiên đăng nhập/Premium của trình duyệt) */
-  function openVideo(list, i) {
-    const s = Util.loadSettings();
-    if (s.playerMode === "stream" && !s.streamServer) { toast("Chưa nhập máy chủ stream trong Cài đặt"); navigate("settings"); return; }
-    if (s.playerMode !== "youtube") return Player.playList(list, i);
-    const ids = list.slice(i).map(v => v.id).filter(Boolean).slice(0, 50);
-    if (!ids.length) return;
-    try { sessionStorage.setItem("cartube.returnView", currentView || "home"); } catch (_) {}
-    const url = ids.length === 1
-      ? "https://www.youtube.com/watch?v=" + encodeURIComponent(ids[0])
-      : "https://www.youtube.com/watch_videos?video_ids=" + ids.map(encodeURIComponent).join(",");
-    toast("Đang mở trên YouTube… Bấm Back để quay lại app", 1500);
-    setTimeout(() => location.assign(url), 150);
-  }
+  function openVideo(list, i) { Player.playList(list, i); }
   function card(v, list, i) {
     const t = $("#tpl-card").content.firstElementChild.cloneNode(true);
     const img = t.querySelector("img"); img.src = v.thumb; img.alt = "";
@@ -92,9 +79,7 @@
       chips.replaceChildren(...cats.map(c => el("button", { class: "chip" + (c.id === trendingCat ? " active" : ""), type: "button", text: c.title, onclick: () => { trendingCat = c.id; renderHome(); } })));
       chips.hidden = false;
 
-      const useInv = Stream.active();   // có máy chủ stream: xu hướng/tìm kiếm luôn qua đó, không tốn quota Google
-      const demo = !useInv && Demo.active();
-      let page = useInv ? await Stream.trending({ categoryId: trendingCat }) : demo ? Demo.trending() : await Api.trending({ categoryId: trendingCat });
+      let page = await Stream.trending({ categoryId: trendingCat });
       const items = page.items;
       const g = grid(items);
       view.replaceChildren(g);
@@ -161,14 +146,12 @@
       searchQuery = q; input.value = q; pushHistory(q);
       results.replaceChildren(el("div", { class: "state" }, [el("div", { class: "spinner" })]));
       try {
-        const useInv = Stream.active();   // có máy chủ stream: xu hướng/tìm kiếm luôn qua đó, không tốn quota Google
-        const demo = !useInv && Demo.active();
-        let page = useInv ? await Stream.search(q) : demo ? Demo.search(q) : await Api.search(q);
+        let page = await Stream.search(q);
         const items = page.items;
         const g = grid(items, { emptyMsg: "Không tìm thấy kết quả." });
         results.replaceChildren(g);
         const addMore = () => { if (page.next) results.append(moreButton(async () => {
-          page = useInv ? await Stream.search(q, { page: +page.next }) : await Api.search(q, { pageToken: page.next });
+          page = await Stream.search(q, { page: +page.next });
           const start = items.length; items.push(...page.items);
           page.items.forEach((v, i) => g.append(card(v, items, start + i)));
           addMore();
@@ -250,55 +233,17 @@
       ? [el("span", { class: "btn", text: "Đã đăng nhập: " + (st.profile?.name || "Google") }), el("button", { class: "btn danger", type: "button", text: "Đăng xuất", onclick: () => { Auth.signOut(); subsCache = null; renderSettings(); } })]
       : [el("button", { class: "btn primary", type: "button", text: "Đăng nhập Google", onclick: doSignIn })]);
 
-    const ytMode = s.playerMode === "youtube", streamMode = s.playerMode === "stream";
-    const serverInput = el("input", { type: "url", value: s.streamServer || "", placeholder: "https://ddns.vuthao.id.vn", spellcheck: "false", autocapitalize: "off" });
-    const serverRow = el("div", { class: "btn-row" }, [
-      el("button", { class: "btn primary", type: "button", text: "Lưu & kiểm tra", onclick: async () => {
-        const url = serverInput.value.trim().replace(/\/+$/, "");
-        Util.saveSettings({ streamServer: url });
-        if (!url) { toast("Đã xoá máy chủ"); return; }
-        toast("Đang kiểm tra…");
-        try { const st = await Stream.stats(); toast("Máy chủ OK (Invidious " + (st.version || "") + "). Đang tải lại…"); setTimeout(() => location.reload(), 800); }
-        catch (e) { toast("Không kết nối được: " + e.message, 5000); }
-      } })
-    ]);
-    const streamFields = streamMode ? [field("Máy chủ stream", el("div", { class: "field" }, [serverInput, serverRow]))] : [];
-    const playerFields = ytMode ? [
-      el("div", { class: "field" }, [el("label", { text: "Tạm dừng ở chế độ YouTube.com" }),
-        el("div", { class: "muted", text: "Tự phát, phụ đề, chất lượng, khung ảo, bù trễ tiếng, nút to và cử chỉ của app. Các mục này dùng trình phát của YouTube." })])
-    ] : [
-      field("Tự phát video tiếp theo", seg("autoplayNext", [[true, "Bật"], [false, "Tắt"]])),
-      field("Phụ đề mặc định", seg("captions", [[true, "Bật"], [false, "Tắt"]])),
-      field("Ngôn ngữ phụ đề ưu tiên", seg("captionLang", [["vi", "Tiếng Việt"], ["en", "English"], ["ja", "日本語"], ["ko", "한국어"]])),
-      field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]], () => Player.applyRenderScale())),
-      ...(streamMode ? [field("DASH (chất lượng cao)", seg("streamDash", [[true, "Bật"], [false, "Tắt"]]))] : [field("Khung ảo ép chất lượng", seg("virtualFrame", [[true, "Bật"], [false, "Tắt"]], () => Player.applyRenderScale()))]),
-      ...(streamMode ? [] : [field("Bù trễ tiếng", (() => {
-        const cur = +s.avOffsetMs || 0;
-        const label = cur === 0 ? "Tắt" : (cur > 0 ? "Tiếng chậm " + cur + " ms" : "Tiếng sớm " + (-cur) + " ms");
-        const set = (ms) => {
-          ms = Math.max(-2000, Math.min(2000, ms));
-          const needReload = Player.setAvOffset(ms);
-          if (needReload) { toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); } else renderSettings();
-        };
-        return el("div", { class: "stepper" }, [
-          el("button", { class: "btn", type: "button", text: "−100", onclick: () => set(cur - 100) }),
-          el("button", { class: "btn", type: "button", text: "−25", onclick: () => set(cur - 25) }),
-          el("span", { class: "btn val", text: label }),
-          el("button", { class: "btn", type: "button", text: "+25", onclick: () => set(cur + 25) }),
-          el("button", { class: "btn", type: "button", text: "+100", onclick: () => set(cur + 100) }),
-          el("button", { class: "btn" + (cur === 0 ? " primary" : ""), type: "button", text: "Tắt", onclick: () => set(0) })
-        ]);
-      })())])
-    ];
     view.replaceChildren(el("div", { class: "settings" }, [
       field("Tài khoản", account),
-      field("Trình phát", seg("playerMode", [["custom", "Nút lớn (embed)"], ["stream", "Stream (máy chủ riêng)"], ["native", "YouTube gốc"], ["youtube", "YouTube.com (Premium)"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
-      ...streamFields,
       field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
+      field("Tự phát video tiếp theo", seg("autoplayNext", [[true, "Bật"], [false, "Tắt"]])),
+      field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]])),
+      field("DASH (chất lượng cao)", seg("streamDash", [[true, "Bật"], [false, "Tắt"]])),
+      field("Phụ đề mặc định", seg("captions", [[true, "Bật"], [false, "Tắt"]])),
+      field("Ngôn ngữ phụ đề ưu tiên", seg("captionLang", [["vi", "Tiếng Việt"], ["en", "English"], ["ja", "日本語"], ["ko", "한국어"]])),
       field("Phím điều khiển hệ thống", seg("mediaKeys", [[true, "Bật"], [false, "Tắt"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
-      ...(streamMode ? [field("Phát tiếng khi vào nền", seg("bgAudio", [["auto", "Tự động"], [true, "Bật"], [false, "Tắt"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); }))] : []),
+      field("Phát tiếng khi vào nền", seg("bgAudio", [["auto", "Tự động"], [true, "Bật"], [false, "Tắt"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
       field("Ngôn ngữ giọng nói", seg("speechLang", [["vi-VN", "Tiếng Việt"], ["en-US", "English"], ["ja-JP", "日本語"], ["ko-KR", "한국어"]])),
-      ...playerFields,
       field("Nhật ký sự kiện", el("div", { class: "btn-row" }, [
         el("button", { class: "btn", type: "button", text: "Xem nhật ký", onclick: () => {
           const box = el("textarea", { class: "logbox", readonly: true });
@@ -392,11 +337,7 @@
   });
   // Đổi hướng/tỉ lệ màn hình: vẽ lại để lưới cập nhật
   matchMedia("(orientation: portrait)").addEventListener?.("change", () => { if (!Player.isExpanded()) navigate(currentView, true); });
-  let startView = "home";
-  try { const r = sessionStorage.getItem("cartube.returnView"); if (r) { startView = r; sessionStorage.removeItem("cartube.returnView"); } } catch (_) {}
-  navigate(startView);
-  // Quay lại từ youtube.com bằng Back có thể khôi phục trang từ bộ nhớ đệm: về đúng tab đã lưu
-  window.addEventListener("pageshow", (e) => { if (e.persisted) { try { const r = sessionStorage.getItem("cartube.returnView"); if (r) { sessionStorage.removeItem("cartube.returnView"); navigate(r, true); } } catch (_) {} } });
+  navigate("home");
 
   window.App = { navigate };
 })();

@@ -7,10 +7,6 @@ window.CARTUBE_DEFAULTS = {
   // Đây là giá trị công khai; bảo vệ bằng "Authorized JavaScript origins" trong Console.
   clientId: "141361788875-f0g3hn492mnki5kvihbv656bf77epe8r.apps.googleusercontent.com",
 
-  // API key (nâng cao, tuỳ chọn): chỉ cần nếu muốn xem Xu hướng / Tìm kiếm thật khi CHƯA đăng nhập.
-  // Đã đăng nhập thì mọi yêu cầu dùng token OAuth, không cần key.
-  apiKey: "",
-
   // Mã vùng cho bảng xếp hạng thịnh hành (VN, US, JP, KR, ...)
   region: "VN",
 
@@ -28,22 +24,11 @@ window.CARTUBE_DEFAULTS = {
   captions: false,
   captionLang: "vi",
 
-  // Chất lượng ưu tiên: auto | hd1080 | hd720 | large(480p) | medium(360p)
+  // Chất lượng ưu tiên: auto | hd1440 | hd1080 | hd720 | large(480p) | medium(360p)
   quality: "auto",
-  // Ép chất lượng bằng "khung ảo" (render iframe ở đúng kích thước rồi thu nhỏ). Tắt nếu thiết bị hiển thị video lệch.
-  virtualFrame: true,
 
-  // Bù trễ tiếng (ms). 0 = tắt. Dương = tiếng phát chậm lại (khi hình trên xe chậm hơn tiếng), âm = tiếng sớm hơn.
-  // Khác 0 sẽ chạy 2 trình phát song song (một hình, một tiếng) - thử nghiệm.
-  avOffsetMs: 0,
-
-  // Trình phát: custom (nút lớn, tuỳ biến) | native (embed với điều khiển của YouTube)
-  //             | youtube (mở thẳng youtube.com ở tầng trên cùng: dùng phiên đăng nhập/Premium của trình duyệt, không quảng cáo)
-  //             | stream (máy chủ Invidious riêng, xem server/README.md: không quảng cáo, chọn chất lượng thật, bù trễ chính xác)
-  playerMode: "custom",
-
-  // Địa chỉ máy chủ stream (https://...), dùng cho chế độ stream
-  streamServer: "",
+  // Máy chủ stream (Invidious tự host, xem server/README.md). Cố định, không đổi trong app.
+  streamServer: "https://api-ytdlp.vuth.vn",
   // Nhận lệnh play/pause từ hệ thống (nút vô lăng, Now Playing, tai nghe): true | false
   mediaKeys: true,
   // Chế độ stream: tiếp tục phát tiếng bằng thẻ <audio> khi trang vào nền. "auto" = tắt trên iOS (thẻ audio thứ hai

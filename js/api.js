@@ -17,10 +17,7 @@ window.Api = (function () {
 
     const q = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== "") q.set(k, v);
-    if (!token) {
-      if (!s.apiKey) throw new ApiError("Chưa cấu hình API key hoặc chưa đăng nhập", 401, "no_credentials");
-      q.set("key", s.apiKey);
-    }
+    if (!token) throw new ApiError("Cần đăng nhập", 401, "login_required");
     const url = BASE + endpoint + "?" + q.toString();
     const ck = (token ? "T:" : "K:") + url;
     const hit = cache.get(ck);

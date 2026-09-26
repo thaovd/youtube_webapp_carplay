@@ -11,8 +11,8 @@ window.Stream = (function () {
   const Q_TO_HEIGHT = Object.fromEntries(HEIGHT_TO_Q.map(([h, q]) => [q, h]));
   const qOfHeight = (h) => (HEIGHT_TO_Q.find(([hh]) => h >= hh) || [0, "tiny"])[1];
 
-  function server() { return (Util.loadSettings().streamServer || "").replace(/\/+$/, ""); }
-  function active() { return Util.loadSettings().playerMode === "stream" && !!server(); }
+  function server() { return (window.CARTUBE_DEFAULTS.streamServer || "").replace(/\/+$/, ""); }
+  function active() { return !!server(); }
   /* URL từ Invidious: tương đối -> ghép máy chủ; tuyệt đối nhưng trỏ tên miền khác (DOMAIN cấu hình lệch) -> đổi về máy chủ đã nhập */
   function abs(u) {
     if (!u) return u;
