@@ -18,6 +18,18 @@
   function stateMsg(msg, actions = []) {
     view.replaceChildren(el("div", { class: "state" }, [el("p", { text: msg }), ...actions]));
   }
+  /* Mở video: theo chế độ trình phát. "youtube" = chuyển cả trang sang youtube.com (dùng phiên đăng nhập/Premium của trình duyệt) */
+  function openVideo(list, i) {
+    if (Util.loadSettings().playerMode !== "youtube") return Player.playList(list, i);
+    const ids = list.slice(i).map(v => v.id).filter(Boolean).slice(0, 50);
+    if (!ids.length) return;
+    try { sessionStorage.setItem("cartube.returnView", currentView || "home"); } catch (_) {}
+    const url = ids.length === 1
+      ? "https://www.youtube.com/watch?v=" + encodeURIComponent(ids[0])
+      : "https://www.youtube.com/watch_videos?video_ids=" + ids.map(encodeURIComponent).join(",");
+    toast("Đang mở trên YouTube… Bấm Back để quay lại app", 1500);
+    setTimeout(() => location.assign(url), 150);
+  }
   function card(v, list, i) {
     const t = $("#tpl-card").content.firstElementChild.cloneNode(true);
     const img = t.querySelector("img"); img.src = v.thumb; img.alt = "";
@@ -28,7 +40,7 @@
     if (v.views) bits.push(fmtCount(v.views) + " lượt xem");
     if (v.publishedAt) bits.push(fmtAgo(v.publishedAt));
     t.querySelector(".card-sub").textContent = bits.filter(Boolean).join(" · ");
-    t.addEventListener("click", () => Player.playList(list, i));
+    t.addEventListener("click", () => openVideo(list, i));
     return t;
   }
   function grid(items, { emptyMsg = "Không có video." } = {}) {
@@ -210,8 +222,8 @@
       const page = await Api.playlistItems(p.id, { max: 50 });
       view.replaceChildren(
         el("div", { class: "btn-row", style: "margin-bottom:var(--gap)" }, [
-          el("button", { class: "btn primary", type: "button", text: "▶ Phát tất cả", onclick: () => Player.playList(page.items, 0) }),
-          el("button", { class: "btn", type: "button", text: "🔀 Trộn", onclick: () => Player.playList(page.items.slice().sort(() => Math.random() - .5), 0) })
+          el("button", { class: "btn primary", type: "button", text: "▶ Phát tất cả", onclick: () => openVideo(page.items, 0) }),
+          el("button", { class: "btn", type: "button", text: "🔀 Trộn", onclick: () => openVideo(page.items.slice().sort(() => Math.random() - .5), 0) })
         ]),
         grid(page.items)
       );
@@ -234,11 +246,12 @@
       ? [el("span", { class: "btn", text: "Đã đăng nhập: " + (st.profile?.name || "Google") }), el("button", { class: "btn danger", type: "button", text: "Đăng xuất", onclick: () => { Auth.signOut(); subsCache = null; renderSettings(); } })]
       : [el("button", { class: "btn primary", type: "button", text: "Đăng nhập Google", onclick: doSignIn })]);
 
-    view.replaceChildren(el("div", { class: "settings" }, [
-      field("Tài khoản", account),
-      field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
+    const ytMode = s.playerMode === "youtube";
+    const playerFields = ytMode ? [
+      el("div", { class: "field" }, [el("label", { text: "Tạm dừng ở chế độ YouTube.com" }),
+        el("div", { class: "muted", text: "Tự phát, phụ đề, chất lượng, khung ảo, bù trễ tiếng, nút to và cử chỉ của app. Các mục này dùng trình phát của YouTube." })])
+    ] : [
       field("Tự phát video tiếp theo", seg("autoplayNext", [[true, "Bật"], [false, "Tắt"]])),
-      field("Ngôn ngữ giọng nói", seg("speechLang", [["vi-VN", "Tiếng Việt"], ["en-US", "English"], ["ja-JP", "日本語"], ["ko-KR", "한국어"]])),
       field("Phụ đề mặc định", seg("captions", [[true, "Bật"], [false, "Tắt"]])),
       field("Ngôn ngữ phụ đề ưu tiên", seg("captionLang", [["vi", "Tiếng Việt"], ["en", "English"], ["ja", "日本語"], ["ko", "한국어"]])),
       field("Chất lượng video ưu tiên", seg("quality", [["auto", "Tự động"], ["hd1440", "1440p"], ["hd1080", "1080p"], ["hd720", "720p"], ["large", "480p"], ["medium", "360p"]], () => Player.applyRenderScale())),
@@ -259,8 +272,14 @@
           el("button", { class: "btn", type: "button", text: "+100", onclick: () => set(cur + 100) }),
           el("button", { class: "btn" + (cur === 0 ? " primary" : ""), type: "button", text: "Tắt", onclick: () => set(0) })
         ]);
-      })()),
-      field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
+      })())
+    ];
+    view.replaceChildren(el("div", { class: "settings" }, [
+      field("Tài khoản", account),
+      field("Trình phát", seg("playerMode", [["custom", "Nút lớn (tuỳ biến)"], ["native", "YouTube gốc"], ["youtube", "YouTube.com (Premium)"]], () => { Util.toast("Đang tải lại…"); setTimeout(() => location.reload(), 400); })),
+      field("Cỡ giao diện", seg("uiScale", [["normal", "Thường"], ["large", "Lớn"], ["xlarge", "Rất lớn"]], applyScale)),
+      field("Ngôn ngữ giọng nói", seg("speechLang", [["vi-VN", "Tiếng Việt"], ["en-US", "English"], ["ja-JP", "日本語"], ["ko-KR", "한국어"]])),
+      ...playerFields,
       field("Phiên bản", el("div", { class: "btn-row" }, [
         el("span", { class: "btn", text: "Bản " + (window.CARTUBE_BUILD.startsWith("__") ? "cục bộ" : window.CARTUBE_BUILD) }),
         el("button", { class: "btn primary", type: "button", text: "Tải lại bản mới", onclick: async () => { const updated = await checkForUpdate(false); if (!updated) setTimeout(hardReload, 600); } })
@@ -346,7 +365,11 @@
   });
   // Đổi hướng/tỉ lệ màn hình: vẽ lại để lưới cập nhật
   matchMedia("(orientation: portrait)").addEventListener?.("change", () => { if (!Player.isExpanded()) navigate(currentView, true); });
-  navigate("home");
+  let startView = "home";
+  try { const r = sessionStorage.getItem("cartube.returnView"); if (r) { startView = r; sessionStorage.removeItem("cartube.returnView"); } } catch (_) {}
+  navigate(startView);
+  // Quay lại từ youtube.com bằng Back có thể khôi phục trang từ bộ nhớ đệm: về đúng tab đã lưu
+  window.addEventListener("pageshow", (e) => { if (e.persisted) { try { const r = sessionStorage.getItem("cartube.returnView"); if (r) { sessionStorage.removeItem("cartube.returnView"); navigate(r, true); } } catch (_) {} } });
 
   window.App = { navigate };
 })();

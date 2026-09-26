@@ -72,6 +72,15 @@ Nếu triển khai ở tên miền khác hoặc muốn dùng project Google Clou
 4. Dán Client ID vào `js/config.js`.
 5. (Nâng cao, tuỳ chọn) `apiKey` trong `js/config.js` cho phép xem Xu hướng / Tìm kiếm thật khi chưa đăng nhập.
 
+## Chế độ trình phát
+
+- **Nút lớn (tuỳ biến)**: embed YouTube với điều khiển của app (cử chỉ, bù trễ tiếng, che giao diện, ép chất lượng).
+- **YouTube gốc**: embed với điều khiển của YouTube (có bánh răng chất lượng/phụ đề).
+- **YouTube.com (Premium)**: bấm video sẽ chuyển cả trang sang youtube.com với hàng đợi làm playlist tạm.
+  Vì là tầng trên cùng nên trình duyệt dùng phiên đăng nhập YouTube của bạn (Premium, không quảng cáo),
+  điều mà iframe embed không làm được trong WebView chặn cookie bên thứ ba (Safari, APTV…).
+  Các tính năng của app trong lúc phát tạm dừng ở chế độ này; bấm Back để về app.
+
 ## Ghi chú kỹ thuật
 
 - YouTube **không** cung cấp API cho feed "Đề xuất cho bạn" hay lịch sử xem, nên mục gợi ý cá nhân được xây từ

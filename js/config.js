@@ -37,7 +37,8 @@ window.CARTUBE_DEFAULTS = {
   // Khác 0 sẽ chạy 2 trình phát song song (một hình, một tiếng) - thử nghiệm.
   avOffsetMs: 0,
 
-  // Trình phát: custom (nút lớn, tuỳ biến) | native (trình phát YouTube gốc, có menu chất lượng/phụ đề của YouTube)
+  // Trình phát: custom (nút lớn, tuỳ biến) | native (embed với điều khiển của YouTube)
+  //             | youtube (mở thẳng youtube.com ở tầng trên cùng: dùng phiên đăng nhập/Premium của trình duyệt, không quảng cáo)
   playerMode: "custom",
 
   // Số video tối đa mỗi trang
